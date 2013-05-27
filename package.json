@@ -1,0 +1,19 @@
+{
+  "name": "sv",
+  "version": "0.1.1",
+  "description": "Any separated values.",
+  "keywords": ["any", "separated", "values", "csv", "tsv", "tabular", "tables"],
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/chbrown/sv.git"
+  },
+  "author": "Christopher Brown <io@henrian.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "tap": "*"
+  },
+  "scripts": {
+    "test": "tap test"
+  }
+}
