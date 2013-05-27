@@ -102,6 +102,7 @@ var Stringifier = exports.Stringifier = function(opts) {
     this._buffer = [];
   }
   // logEvents(this, 'stringifier', ['readable', 'end', 'close', 'error', 'drain']);
+  // this.on('end', this._flush);
 };
 util.inherits(Stringifier, stream.Readable);
 
@@ -130,12 +131,14 @@ Stringifier.prototype._write = function(obj) {
     // obj is definitely an array now, but the fields aren't quoted.
     for (var j = 0; j < length; j++) {
       // assume minimal quoting (don't quote unless the cell contains the delimiter)
-      if (obj[j].indexOf(this.delimiter) > -1) {
-        if (obj[j].indexOf(this.quotechar) > -1) {
-          obj[j] = obj[j].replace(this.quotechar_regex, '\\' + this.quotechar);
+      var value = obj[j].toString();
+      if (value.indexOf(this.delimiter) > -1) {
+        if (value.indexOf(this.quotechar) > -1) {
+          value = value.replace(this.quotechar_regex, '\\' + this.quotechar);
         }
-        obj[j] = this.quotechar + obj[j] + this.quotechar;
+        value = this.quotechar + value + this.quotechar;
       }
+      obj[j] = value;
     }
 
     this.push(obj.join(this.delimiter) + this.newline, this.encoding);
@@ -185,6 +188,7 @@ Stringifier.prototype.end = function() {
   // we don't just want to emit('end') since that will send finish to the target pipe
   // http://nodejs.org/api/stream.html#stream_readable_push_chunk_encoding
   // push(null) is the proper way to signal EOF
+  this._flush();
   this.push(null);
 };
 

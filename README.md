@@ -44,11 +44,15 @@ And in node:
     ];
 
     var sv = require('sv');
-    var stringifier = new sv.Stringifier({peek: 5, missing: 'n/a'});
+    var stringifier = new sv.Stringifier({peek: 2, missing: 'n/a'});
     stringifier.pipe(process.stdout);
     expenses.forEach(function(expense) {
-      stringifier(expense);
+      stringifier.write(expense);
     });
+
+    // if you write set 'peek' to more rows than you have in your data,
+    // you'll need to call stringifier end so that the get flushed.
+    stringifier.end();
 
 * N.b.: If you pipe a buffer or (i.e., with a stringifier) into a parser, the
   parser will not receive any encoding. You _must_ set the encoding on the
