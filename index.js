@@ -13,18 +13,25 @@ var Stringifier = exports.Stringifier = require('./stringifier');
 // }
 
 if (require.main === module) {
-  var argv = require('optimist')
+  var optimist = require('optimist')
     .usage([
       'Consolidate any tabular format.',
       '',
       '  argv will be passed directly to the Stringifier constructor.',
       '  process.stdin will be set to utf8',
-    ].join('\n'))
-    .argv;
+      '',
+      '  cat data.tsv | sv > data.csv'
+    ].join('\n'));
 
   var parser = new Parser();
-  var stringifier = new Stringifier(argv);
+  var stringifier = new Stringifier(optimist.argv);
 
-  process.stdin.setEncoding('utf8');
-  process.stdin.pipe(parser).pipe(stringifier).pipe(process.stdout);
+  if (process.stdin.isTTY) {
+    optimist.showHelp();
+    console.error("You must supply data via STDIN");
+  }
+  else {
+    process.stdin.setEncoding('utf8');
+    process.stdin.pipe(parser).pipe(stringifier).pipe(process.stdout);
+  }
 }
