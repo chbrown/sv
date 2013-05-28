@@ -5,11 +5,17 @@ For all your separated value needs.
 * `sv.Stringifier` is a [Readable stream](http://nodejs.org/api/stream.html#stream_class_stream_readable).
 * `sv.Parser` is a [Writable stream](http://nodejs.org/api/stream.html#stream_class_stream_writable).
 
-## Usage:
+## Install
+
+    npm install sv
+
+The `optimist` dependency is only required for command line use.
+
+## API usage
 
 All tabular data must / will have column names on the first row.
 
-### Parsing:
+### Parsing
 
 sprints.csv:
 
@@ -32,7 +38,7 @@ And in node:
     var sprints = fs.createReadStream('sprints.csv', {encoding: 'utf8'});
     sprints.pipe(parser);
 
-### Stringifying:
+### Stringifying
 
     var expenses = [
       {name: 'Tip'                },
@@ -51,7 +57,7 @@ And in node:
     });
 
     // if you write set 'peek' to more rows than you have in your data,
-    // you'll need to call stringifier end so that the get flushed.
+    // you'll need to call stringifier end so that they get flushed.
     stringifier.end();
 
 * N.b.: If you pipe a buffer or (i.e., with a stringifier) into a parser, the
