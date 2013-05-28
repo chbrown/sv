@@ -41,11 +41,21 @@ function inferDelimiter(buffer) {
     * They are inferred if they are missing once the headers have been inferred.
   - `missing` is the value we use for 'time' when we have
     `columns = ['index', 'time']` and `write({index: 90})` is called.
-  - `peek` is an integer (or null) describing how many rows we should peek
     at before inferring headers and flushing
 */
 var Parser = module.exports = function(opts) {
-  stream.Writable.call(this);
+  stream.Transform.call(this, {
+    decodeStrings: true, // Writable option, ensure _transform always gets a Buffer
+    objectMode: true, // Readable option, .read(n) should return a single value, rather than a Buffer
+  });
+  // this._readableState.objectMode = true; // default
+  // decodeStrings: true, dammit! ()
+  // stream.Transform({decodeStrings: true}) is not honored if objectMode: true,
+  // because objectMode: true (intended for the Readable) overrides the decodeStrings: true
+  // if this gets fixed, you can remove the setting below.
+  // Issue at https://github.com/joyent/node/issues/5580
+  this._writableState.objectMode = false;
+
   if (opts === undefined) opts = {};
   this.missing = opts.missing || ''; // should be a string
   this.delimiter = opts.delimiter;
@@ -53,15 +63,11 @@ var Parser = module.exports = function(opts) {
   this.encoding = opts.encoding;
   this.escapechar = (opts.escapechar || '\\').charCodeAt(0);
   this.quotechar = (opts.quotechar || '"').charCodeAt(0);
-  this.on('finish', this._flush);
-  // logEvents(this, 'parser', ['finish', 'close', 'drain', 'error']);
 };
-// we don't use stream.Transform since our 'data' events are objects, not buffers or strings
-// but new stream.Readable(...) takes a {objectMode: true} option. hmmm.
-util.inherits(Parser, stream.Writable);
+util.inherits(Parser, stream.Transform);
 
 // Parser's basic pipeline:
-//   _write -> _flush -> _line -> emit
+//   _transform -> _flush -> _line -> emit
 
 Parser.prototype._line = function(buffer) {
   if (!this.delimiter) {
@@ -103,50 +109,38 @@ Parser.prototype._line = function(buffer) {
     this.columns = cells;
   }
   else {
-    this.emit('data', zip(this.columns, cells, this.missing));
+    this.push(zip(this.columns, cells, this.missing));
   }
 };
 
-Parser.prototype._flush = function(done) {
-  var buffer = this._buffer;
+Parser.prototype._flush = function(callback) {
+  // console.log('_flush');
+  // if there was a trailing newline, this._buffer.length = 0
+  if (this._buffer && this._buffer.length)
+    this._line(this._buffer);
+  // this.push(null); // automatic, _flush is special
+  callback();
+};
+
+Parser.prototype._transform = function(chunk, encoding, callback) {
+  // we'll assume that we always get chunks with the same encoding.
+  if (!this.encoding && encoding != 'buffer')
+    this.encoding = encoding;
+
+  var buffer = (this._buffer && this._buffer.length) ? Buffer.concat([this._buffer, chunk]) : chunk;
   var start = 0;
   var end = buffer.length;
   for (var i = 0; i < end; i++) {
     // handle \r, \r\n, or \n (but not \n\n) as one line break
-    if (buffer[i] === 13) { // '\r'
+    if (buffer[i] === 13 || buffer[i] === 10) { // '\r' or '\n'
       this._line(buffer.slice(start, i));
       // also consume a following \n, if there is one.
-      if (buffer[i+1] === 10) {
+      if (buffer[i] === 13 && buffer[i+1] === 10) {
         i++;
       }
       start = i + 1;
     }
-    else if (buffer[i] === 10) { // '\n'
-      this._line(buffer.slice(start, i));
-      start = i + 1;
-    }
   }
-
-
   this._buffer = buffer.slice(start);
-  if (done) {
-    // called by ._write
-    done(null);
-  }
-  else {
-    // called by .on('finish')
-    // if there was a trailing newline, this._buffer.length = 0
-    if (this._buffer.length)
-      this._line(this._buffer);
-    this.emit('end');
-  }
-};
-
-Parser.prototype._write = function(chunk, encoding, done) {
-  // chunk is a buffer. always.
-  // we'll assume that we always get chunks with the same encoding.
-  if (!this.encoding)
-    this.encoding = encoding;
-  this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
-  this._flush(done);
+  callback();
 };

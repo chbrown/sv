@@ -37,7 +37,14 @@ function inferColumns(objects) {
   - `_buffer` is an array of arrays or objects that need to be written
 */
 var Stringifier = module.exports = function(opts) {
-  stream.Readable.call(this);
+  stream.Transform.call(this, {
+    objectMode: true,
+  });
+  // we want:
+  // Readable({objectMode: false})
+  // Writable({objectMode: true})
+  this._readableState.objectMode = false;
+
   if (opts === undefined) opts = {};
   this.encoding = opts.encoding || 'utf8';
   this.peek = opts.peek || 1; // should this even be 1? (ignored if opts.columns)
@@ -60,15 +67,11 @@ var Stringifier = module.exports = function(opts) {
   else {
     this._buffer = [];
   }
-  // logEvents(this, 'stringifier', ['readable', 'end', 'close', 'error', 'drain']);
-  // this.on('end', this._flush);
 };
-util.inherits(Stringifier, stream.Readable);
+util.inherits(Stringifier, stream.Transform);
 
-Stringifier.prototype._read = function(size) {
-  // apparently I don't have to really do anything here.
-};
-Stringifier.prototype._write = function(obj) {
+Stringifier.prototype._line = function(obj) {
+  // _write is already <a href=""></a> thing, so don't use it.
   // this.columns must be set!
   if (typeof(obj) === 'string') {
     // raw string
@@ -103,50 +106,49 @@ Stringifier.prototype._write = function(obj) {
     this.push(obj.join(this.delimiter) + this.newline, this.encoding);
   }
 };
-Stringifier.prototype._writeArray = function(objs) {
-  // would writeMany / writeSeveral / writeAll be better?
+Stringifier.prototype._lines = function(objs) {
   for (var i = 0, l = objs.length; i < l; i++) {
-    this._write(objs[i]);
+    this._line(objs[i]);
   }
 };
-Stringifier.prototype._flush = function() {
+Stringifier.prototype._flush = function(callback) {
   // called when we're done peeking or when end() is called
   // (in which case we are done peeking, but for a different reason)
   if (!this.columns) {
     // infer columns
     this.columns = inferColumns(this._buffer);
-    this._write(this.columns);
+    this._line(this.columns);
   }
 
   if (this._buffer) {
     // flush the _buffer
-    this._writeArray(this._buffer);
+    this._lines(this._buffer);
+    // a null _buffer means we're done peaking and won't be buffering any more rows
     this._buffer = null;
   }
+  // this.push(null); // inferred
+  callback();
 };
 
-Stringifier.prototype.write = function(obj) {
+Stringifier.prototype._transform = function(chunk, encoding, callback) {
+  // objectMode: true, so chunk is an object (and encoding is always 'utf8'?)
   if (this.columns) {
     // flush the _buffer, if needed
     if (this._buffer) {
-      this._writeArray(this._buffer);
+      this._lines(this._buffer);
       this._buffer = null;
     }
-    this._write(obj);
+    this._line(chunk);
+    callback();
   }
   else {
     // if set {peek: 10}, column inference will be called when write(obj) is called the 10th time
-    this._buffer.push(obj);
+    this._buffer.push(chunk);
     if (this._buffer.length >= this.peek) {
-      this._flush();
+      this._flush(callback);
+    }
+    else {
+      callback();
     }
   }
-};
-
-Stringifier.prototype.end = function() {
-  // we don't just want to emit('end') since that will send finish to the target pipe
-  // http://nodejs.org/api/stream.html#stream_readable_push_chunk_encoding
-  // push(null) is the proper way to signal EOF
-  this._flush();
-  this.push(null);
 };

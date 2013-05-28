@@ -18,6 +18,7 @@ if (require.main === module) {
       'Consolidate any tabular format.',
       '',
       '  argv will be passed directly to the Stringifier constructor.',
+      '  process.stdin will be set to utf8',
     ].join('\n'))
     .argv;
 
