@@ -22,10 +22,10 @@
   "author": "Christopher Brown <io@henrian.com>",
   "license": "MIT",
   "dependencies": {
-    "optimist": "*"
+    "optimist": "0.5.2"
   },
   "devDependencies": {
-    "tap": "*"
+    "tap": "0.4.x"
   },
   "scripts": {
     "test": "tap test"

@@ -17,20 +17,37 @@ if (require.main === module) {
     .usage([
       'Consolidate any tabular format.',
       '',
-      '  argv will be passed directly to the Stringifier constructor.',
-      '  process.stdin will be set to utf8',
+      'Usage: <sprints.txt sv [options] > sprints.csv',
       '',
-      '  cat data.tsv | sv > data.csv'
-    ].join('\n'));
+      'Options:',
+      '  -p, --peek 10       infer columns from first ten lines of input',
+      '  -d, --delimiter ,   field separator',
+      '  -q, --quotechar "   mark beginning and end of fields containing delimiter',
+      '  -e, --escapechar \\  escape quotechars when quoted',
+      '',
+      'Only STDIN is supported, and it is coerced to utf8',
+    ].join('\n'))
+    .string('delimiter')
+    .alias({
+      p: 'peek',
+      d: 'delimiter',
+      q: 'quotechar',
+      e: 'escapechar',
+    });
+  var argv = optimist.argv;
 
-  var parser = new Parser();
-  var stringifier = new Stringifier(optimist.argv);
-
-  if (process.stdin.isTTY) {
+  if (argv.help) {
+    optimist.showHelp();
+    console.log(argv);
+    console.log(process.argv);
+  }
+  else if (process.stdin.isTTY) {
     optimist.showHelp();
     console.error("You must supply data via STDIN");
   }
   else {
+    var parser = new Parser();
+    var stringifier = new Stringifier(argv);
     process.stdin.setEncoding('utf8');
     process.stdin.pipe(parser).pipe(stringifier).pipe(process.stdout);
   }
