@@ -9,11 +9,13 @@ function inferColumns(objects) {
   for (var obj, i = 0; (obj = objects[i]); i++) {
     // each object might be a string, array, or object, but only objects matter here.
     if (typeof(obj) !== 'string' && !util.isArray(obj)) {
-      var keys = Object.keys(obj);
-      for (var key, k = 0; (key = keys[k]); k++) {
-        if (!(key in seen)) {
-          columns.push(key);
-          seen[key] = 1;
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          // maybe should also check that obj[key] != null
+          if (!(key in seen)) {
+            columns.push(key);
+            seen[key] = 1;
+          }
         }
       }
     }

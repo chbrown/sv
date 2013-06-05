@@ -1,4 +1,4 @@
-'use strict'; /*jslint node: true, es5: true, indent: 2, multistr: true */
+'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var fs = require('fs');
 var test = require('tap').test;
 
