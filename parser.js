@@ -81,7 +81,10 @@ Parser.prototype._line = function(buffer) {
   for (var i = 0; i < end; i++) {
     // if we are on an escape char, simply skip over it (++) and the (default)
     if (buffer[i] === this.escapechar) {
-      i++;
+      // excel is bizarre. An escape before a quotechar doesn't count.
+      if (buffer[i+1] !== this.quotechar) {
+        i++;
+      }
     }
     // if we are outside quoting and on a "
     else if (!inside && buffer[i] === this.quotechar) {
@@ -104,7 +107,7 @@ Parser.prototype._line = function(buffer) {
         // advance so that buffer[i] == '\t'
         inside = false;
         cells.push(buffer.toString(this.encoding, start, i));
-        start = i + 1;
+        start = i + 2;
       }
       i++;
     }
@@ -129,7 +132,6 @@ Parser.prototype._line = function(buffer) {
 };
 
 Parser.prototype._flush = function(callback) {
-  // console.log('_flush');
   // if there was a trailing newline, this._buffer.length = 0
   if (this._buffer && this._buffer.length)
     this._line(this._buffer);
