@@ -59,3 +59,22 @@ test('stringify', function (t) {
   stringifier.write({ index: '5', name: 'larry', time: '1:31' });
   stringifier.end();
 });
+
+test('excel parser', function (t) {
+  var input = [
+    'index  name  time',
+    '1  "chris ""breezy"" brown" 1:18',
+    '2  "stephen" 1:16',
+  ].join('\n');
+
+  var rows = [];
+  var parser = new sv.Parser();
+  parser.on('data', function(obj) {
+    rows.push(obj);
+  });
+  parser.end(input, function() {
+    t.equal(rows.length, 2, 'There should be two rows.');
+    t.equal(rows[0].name, 'chris "breezy" brown', 'The paired double quotes should be interpreted as just one double quote.');
+    t.end();
+  });
+});

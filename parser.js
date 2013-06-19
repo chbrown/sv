@@ -79,21 +79,36 @@ Parser.prototype._line = function(buffer) {
   var end = buffer.length;
   var inside = false; // i.e., inside quotes = inside cell
   for (var i = 0; i < end; i++) {
+    // if we are on an escape char, simply skip over it (++) and the (default)
     if (buffer[i] === this.escapechar) {
       i++;
     }
+    // if we are outside quoting and on a "
     else if (!inside && buffer[i] === this.quotechar) {
       inside = true;
       start = i + 1;
     }
+    // if we are inside quoting and on a "
     else if (inside && buffer[i] === this.quotechar) {
-      inside = false;
-      cells.push(buffer.toString(this.encoding, start, i));
-      // assume that an end quotechar is always followed by a delimiter
-      // advance so that buffer[i] == '\t'
+      // handle excel dialect: double quotechar => single literal quotechar
+      if (buffer[i+1] === this.quotechar) {
+        // double quotechar
+        // `inside` remains true
+        // we need to collapse out the current index. this might be optimized somehow
+        // buffer.copy(targetBuffer, [targetStart], [sourceStart], [sourceEnd])#
+        buffer.copy(buffer, i, i+1);
+        end--;
+      }
+      else {
+        // otherwise, assume that an end quotechar is always followed by a delimiter.
+        // advance so that buffer[i] == '\t'
+        inside = false;
+        cells.push(buffer.toString(this.encoding, start, i));
+        start = i + 1;
+      }
       i++;
-      start = i + 1;
     }
+    // otherwise we just wait for the delimiter
     else if (!inside && buffer[i] === this.delimiter) {
       cells.push(buffer.toString(this.encoding, start, i));
       start = i + 1;
@@ -101,7 +116,7 @@ Parser.prototype._line = function(buffer) {
   }
   if (start < end) {
     // we may have consumed the last field, already, if it was quoted.
-    cells.push(buffer.toString(this.encoding, start));
+    cells.push(buffer.toString(this.encoding, start, end));
   }
 
   if (!this.columns) {
