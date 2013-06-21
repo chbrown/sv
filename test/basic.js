@@ -47,7 +47,6 @@ test('stringify', function (t) {
     string += chunk.toString();
   });
   stringifier.on('end', function() {
-    // console.error(string);
     t.equal(string, expected, 'Stringify output should equal expected.');
     t.end();
   });
@@ -60,7 +59,7 @@ test('stringify', function (t) {
   stringifier.end();
 });
 
-test('excel parser', function (t) {
+test('excel dialect parser', function (t) {
   var input = [
     'index  name  time',
     '1  "chris ""breezy"" brown" 1:18',
@@ -75,6 +74,26 @@ test('excel parser', function (t) {
   parser.end(input, function() {
     t.equal(rows.length, 2, 'There should be two rows.');
     t.equal(rows[0].name, 'chris "breezy" brown', 'The paired double quotes should be interpreted as just one double quote.');
+    t.end();
+  });
+});
+
+
+test('quoted newlines', function (t) {
+  var input = [
+    'index  name  time',
+    '1  "chris\ngrant\nbrown" 1:18',
+    '2  "stephen\nhodgins" 1:16',
+  ].join('\n');
+
+  var rows = [];
+  var parser = new sv.Parser();
+  parser.on('data', function(obj) {
+    rows.push(obj);
+  });
+  parser.end(input, function() {
+    t.equal(rows.length, 2, 'There should be exactly two rows.');
+    t.equal(rows[0].name, 'chris\ngrant\nbrown', 'Newlines should be retained.');
     t.end();
   });
 });

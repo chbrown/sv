@@ -1,41 +1,12 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var util = require('util');
 var stream = require('stream');
-
-function zip(keys, values, missing) {
-  var obj = {};
-  for (var i = 0, l = keys.length; i < l; i++) {
-    obj[keys[i]] = values[i] || missing;
-  }
-  return obj;
-}
-
-function inferDelimiter(buffer) {
-  // returns a single char code denoting the inferred delimiter
-  var counts = {};
-  for (var i = 0, l = buffer.length; i < l; i++) {
-    var char_code = buffer[i];
-    counts[char_code] = (counts[char_code] || 0) + 1;
-  }
-
-  // we'll go through, prioritizing characters that aren't likely to show
-  // up unless they are a delimiter.
-  var candidates = [
-    9, // '\t' (tab)
-    59, // ';' (semicolon)
-    44, // ',' (comma)
-    32, // ' ' (space)
-  ];
-  // TODO: make this more robust (that's why I even counted them)
-  for (var candidate, j = 0; (candidate = candidates[j]); j++) {
-    if (counts[candidate] > 0)
-      return candidate;
-  }
-}
+var inference = require('./inference');
 
 /* Parser class
   new Parser();
-  - `_buffer` is a buffer of bytes that need to be read in.
+  - `_byte_buffer` is a buffer (of bytes) that have yet to be processed.
+  - `_cell_buffer` is a list of strings that have yet to be processed.
   - `delimiter` is the field separator used for incoming strings.
   - `columns` is an array of strings used as object keys.
     * They are inferred if they are missing once the headers have been inferred.
@@ -63,22 +34,37 @@ var Parser = module.exports = function(opts) {
   this.encoding = opts.encoding;
   this.escapechar = (opts.escapechar || '\\').charCodeAt(0);
   this.quotechar = (opts.quotechar || '"').charCodeAt(0);
+
+  this._byte_buffer = new Buffer(0);
+  this._cell_buffer = [];
 };
 util.inherits(Parser, stream.Transform);
 
-// Parser's basic pipeline:
-//   _transform -> _flush -> _line -> emit
+Parser.prototype._row = function(cells) {
+  if (!this.columns) {
+    // we don't emit the column names as data
+    this.columns = cells;
+  }
+  else {
+    this.push(inference.zip(this.columns, cells, this.missing));
+  }
+};
 
-Parser.prototype._line = function(buffer) {
+Parser.prototype._flush = function(callback, nonfinal) {
+  var buffer = this._byte_buffer;
+  var cells = this._cell_buffer;
+
   if (!this.delimiter) {
-    this.delimiter = inferDelimiter(buffer);
+    // should we wait for some minimum amount of data?
+    this.delimiter = inference.delimiter(buffer);
+    console.error('Using delimiter:', this.delimiter);
   }
 
-  var cells = [];
   var start = 0;
   var end = buffer.length;
   var inside = false; // i.e., inside quotes = inside cell
   for (var i = 0; i < end; i++) {
+
     // if we are on an escape char, simply skip over it (++) and the (default)
     if (buffer[i] === this.escapechar) {
       // excel is bizarre. An escape before a quotechar doesn't count.
@@ -86,12 +72,12 @@ Parser.prototype._line = function(buffer) {
         i++;
       }
     }
-    // if we are outside quoting and on a "
+    // if we are not current inside, and on a "
     else if (!inside && buffer[i] === this.quotechar) {
       inside = true;
       start = i + 1;
     }
-    // if we are inside quoting and on a "
+    // if we are inside a quote, and on a "
     else if (inside && buffer[i] === this.quotechar) {
       // handle excel dialect: double quotechar => single literal quotechar
       if (buffer[i+1] === this.quotechar) {
@@ -116,48 +102,53 @@ Parser.prototype._line = function(buffer) {
       cells.push(buffer.toString(this.encoding, start, i));
       start = i + 1;
     }
-  }
-  if (start < end) {
-    // we may have consumed the last field, already, if it was quoted.
-    cells.push(buffer.toString(this.encoding, start, end));
-  }
-
-  if (!this.columns) {
-    // we don't emit the column names as data
-    this.columns = cells;
-  }
-  else {
-    this.push(zip(this.columns, cells, this.missing));
-  }
-};
-
-Parser.prototype._flush = function(callback) {
-  // if there was a trailing newline, this._buffer.length = 0
-  if (this._buffer && this._buffer.length)
-    this._line(this._buffer);
-  // this.push(null); // automatic, _flush is special
-  callback();
-};
-
-Parser.prototype._transform = function(chunk, encoding, callback) {
-  // we'll assume that we always get chunks with the same encoding.
-  if (!this.encoding && encoding != 'buffer')
-    this.encoding = encoding;
-
-  var buffer = (this._buffer && this._buffer.length) ? Buffer.concat([this._buffer, chunk]) : chunk;
-  var start = 0;
-  var end = buffer.length;
-  for (var i = 0; i < end; i++) {
     // handle \r, \r\n, or \n (but not \n\n) as one line break
-    if (buffer[i] === 13 || buffer[i] === 10) { // '\r' or '\n'
-      this._line(buffer.slice(start, i));
+     // '\r' == 13, '\n' == 10
+    else if (!inside && (buffer[i] == 13 || buffer[i] == 10)) {
+      // we may have consumed the last field, already, if it was quoted.
+      if (start < i) {
+        cells.push(buffer.toString(this.encoding, start, i));
+      }
+
+      // add these cells to the emit queue
+      this._row(cells);
+
+      // and reset them
+      cells = [];
+
       // also consume a following \n, if there is one.
-      if (buffer[i] === 13 && buffer[i+1] === 10) {
+      if (buffer[i] == 13 && buffer[i+1] == 10) {
         i++;
       }
       start = i + 1;
     }
   }
-  this._buffer = buffer.slice(start);
+
+  if (!nonfinal && start < end) {
+    // this is the final flush call, wrap up any loose ends!
+    // add the unprocessed buffer to our cells
+    cells.push(buffer.toString(this.encoding, start, end));
+    this._row(cells);
+    cells = []; // but doesn't really matter
+  }
+
+  // save whatever we have yet to process
+  this._byte_buffer = buffer.slice(start, end);
+  this._cell_buffer = cells;
+
+  // if there was a trailing newline, this._buffer.length = 0
   callback();
+};
+
+Parser.prototype._transform = function(chunk, encoding, callback) {
+  // we'll assume that we always get chunks with the same encoding.
+  if (!this.encoding && encoding != 'buffer') {
+    this.encoding = encoding;
+  }
+
+  // collect unused buffer and new chunk into a single buffer
+  this._byte_buffer = this._byte_buffer.length ? Buffer.concat([this._byte_buffer, chunk]) : chunk;
+
+  // do all the processing
+  this._flush(callback, true);
 };

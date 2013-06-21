@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
-
 var os = require('os');
 var util = require('util');
 var stream = require('stream');
+var inference = require('./inference');
 var Parser = exports.Parser = require('./parser');
 var Stringifier = exports.Stringifier = require('./stringifier');
 
@@ -58,6 +58,21 @@ ObjectOmitter.prototype._transform = function(chunk, encoding, callback) {
   callback();
 };
 
+function pluck(xs, prop) {
+  return xs.map(function(x) { return x[prop]; });
+}
+
+function describe(rows, parser) {
+  // parser.columns are ordered like the original, inference.columns may not be
+  var columns = parser.columns || inference.columns(rows);
+  for (var column_index in columns) {
+    var column_name = columns[column_index];
+    console.log('[' + column_index + '] ' + column_name + ':');
+    var cells = pluck(rows, column_name);
+    console.log('  ' + cells.join(', '));
+  }
+  process.exit(0);
+}
 
 if (require.main === module) {
   var optimist = require('optimist')
@@ -75,11 +90,12 @@ if (require.main === module) {
       '      --filter a,b    keep only fields a and b in the results',
       '      --omit c,d      leave out fields x and y from the results',
       '                      (do not use filter and omit together)',
+      '      --describe      only describe the data, using headers and a few examples',
       '',
       'Only STDIN is supported, and it is coerced to utf8',
     ].join('\n'))
     .string('delimiter')
-    .boolean(['json',])
+    .boolean(['json', 'describe'])
     .alias({
       p: 'peek',
       d: 'delimiter',
@@ -89,6 +105,8 @@ if (require.main === module) {
     });
   var argv = optimist.argv;
 
+  process.stdin.setEncoding('utf8');
+
   if (argv.help) {
     optimist.showHelp();
     console.log('ARGV: ' + process.argv.join(' '));
@@ -96,6 +114,17 @@ if (require.main === module) {
   else if (process.stdin.isTTY) {
     optimist.showHelp();
     console.error('You must supply data via STDIN');
+  }
+  else if (argv.describe) {
+    // var stringifier = argv.json ? new JSONStringifier() : new Stringifier(argv);
+    var parser = process.stdin.pipe(new Parser());
+    var rows = [];
+    parser.on('data', function(row) {
+      rows.push(row);
+      if (rows.length > 10) {
+        describe(rows, parser);
+      }
+    });
   }
   else {
     var stringifier = argv.json ? new JSONStringifier() : new Stringifier(argv);

@@ -2,26 +2,7 @@
 var os = require('os');
 var stream = require('stream');
 var util = require('util');
-
-function inferColumns(objects) {
-  var columns = [];
-  var seen = {};
-  for (var obj, i = 0; (obj = objects[i]); i++) {
-    // each object might be a string, array, or object, but only objects matter here.
-    if (typeof(obj) !== 'string' && !util.isArray(obj)) {
-      for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          // maybe should also check that obj[key] != null
-          if (!(key in seen)) {
-            columns.push(key);
-            seen[key] = 1;
-          }
-        }
-      }
-    }
-  }
-  return columns;
-}
+var inference = require('./inference');
 
 /* Stringifier class
   new Stringifier();
@@ -118,7 +99,7 @@ Stringifier.prototype._flush = function(callback) {
   // (in which case we are done peeking, but for a different reason)
   if (!this.columns) {
     // infer columns
-    this.columns = inferColumns(this._buffer);
+    this.columns = inference.columns(this._buffer);
     this._line(this.columns);
   }
 
