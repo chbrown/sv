@@ -1,4 +1,5 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
+var fs = require('fs');
 var util = require('util');
 
 
@@ -57,4 +58,38 @@ var delimiter = exports.delimiter = function(buffer) {
     if (counts[candidate] > 0)
       return candidate;
   }
+};
+
+
+var commonPrefix = exports.commonPrefix = function(filepaths) {
+  var prefix = filepaths[0];
+  for (var filepath, i = 1; (filepath = filepaths[i]) && prefix.length; i++) {
+    for (var c = 0; prefix[c] == filepath[c]; c++);
+    prefix = prefix.slice(0, c);
+  }
+  return prefix;
+};
+
+
+var lc = exports.lc = function(filepath, callback) {
+  // callback signature: function(err, number_of_lines)
+  var count = 0;
+  fs.createReadStream(filepath).on('data', function(buffer) {
+    for (var i = 0; i < buffer.length; i++) {
+      // universal newlines: handle \r (13), \r\n (13, 10), or \n (10) as one line break
+      // '\r' == 13, '\n' == 10
+      if (buffer[i] == 13) {
+        count++;
+        if (buffer[i+1] == 10)
+          i++;
+      }
+      else if (buffer[i] == 10) {
+        count++;
+      }
+    }
+  }).on('end', function() {
+    callback(null, count);
+  }).on('error', function(err) {
+    callback(err, count);
+  });
 };
