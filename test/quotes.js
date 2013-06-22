@@ -10,6 +10,7 @@ test('excel dialect parser', function (t) {
     '1\t"chris ""breezy"" brown"\t1:20',
     '2\tstephen\t"1:21"""',
     '3\tlordy\t"1:22""x"',
+    '4\t"zam\n""managua"""\t1:23',
   ].join('\n');
 
   var rows = [];
@@ -18,10 +19,11 @@ test('excel dialect parser', function (t) {
     rows.push(obj);
   });
   parser.end(input, function() {
-    t.equal(rows.length, 3, 'There should be three rows.');
+    t.equal(rows.length, 4, 'There should be four rows.');
     t.equal(rows[0].name, 'chris "breezy" brown', 'The paired double quotes should be interpreted as just one double quote.');
     t.equal(rows[1].time, '1:21"', 'Lone triple quotes signify an escaped quote and then end of field.');
     t.equal(rows[2].time, '1:22"x', 'Paired double quotes should collapse to just one.');
+    t.equal(rows[3].name, 'zam\n"managua"', 'Retain double quote at end of field.');
     t.end();
   });
 });
