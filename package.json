@@ -22,6 +22,7 @@
   "author": "Christopher Brown <io@henrian.com>",
   "license": "MIT",
   "dependencies": {
+    "async": "*",
     "optimist": "0.5.2"
   },
   "devDependencies": {
