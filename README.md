@@ -110,6 +110,16 @@ Escapes:
 
 * `\` = 92 (backslash)
 
+## Debugging helper:
+
+    function logEvents(emitter, prefix, names) {
+      names.forEach(function(name) {
+        emitter.on(name, function(/*...*/) {
+          console.error(prefix + ':' + name, arguments);
+        });
+      });
+    }
+
 ## License
 
 Copyright © 2013 Christopher Brown. [MIT Licensed](LICENSE).

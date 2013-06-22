@@ -57,7 +57,6 @@ Parser.prototype._flush = function(callback, nonfinal) {
   if (!this.delimiter) {
     // should we wait for some minimum amount of data?
     this.delimiter = inference.delimiter(buffer);
-    console.error('Using delimiter:', this.delimiter);
   }
 
   var start = 0;

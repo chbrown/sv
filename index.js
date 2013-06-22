@@ -7,14 +7,6 @@ var inference = require('./inference');
 var Parser = exports.Parser = require('./parser');
 var Stringifier = exports.Stringifier = require('./stringifier');
 
-// function logEvents(emitter, prefix, names) {
-//   names.forEach(function(name) {
-//     emitter.on(name, function(/*...*/) {
-//       console.error(prefix + ':' + name, arguments);
-//     });
-//   });
-// }
-
 var JSONStringifier = function(opts) {
   stream.Transform.call(this, {objectMode: true});
   this._readableState.objectMode = false;
