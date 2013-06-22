@@ -3,6 +3,7 @@ var fs = require('fs');
 var test = require('tap').test;
 
 var sv = require('..');
+
 test('import', function (t) {
   t.ok(sv !== undefined, 'sv should load from the current directory');
   t.end();
@@ -57,43 +58,4 @@ test('stringify', function (t) {
   stringifier.write({ index: '4', name: 'stephen', time: '1:16' });
   stringifier.write({ index: '5', name: 'larry', time: '1:31' });
   stringifier.end();
-});
-
-test('excel dialect parser', function (t) {
-  var input = [
-    'index  name  time',
-    '1  "chris ""breezy"" brown" 1:18',
-    '2  "stephen" 1:16',
-  ].join('\n');
-
-  var rows = [];
-  var parser = new sv.Parser();
-  parser.on('data', function(obj) {
-    rows.push(obj);
-  });
-  parser.end(input, function() {
-    t.equal(rows.length, 2, 'There should be two rows.');
-    t.equal(rows[0].name, 'chris "breezy" brown', 'The paired double quotes should be interpreted as just one double quote.');
-    t.end();
-  });
-});
-
-
-test('quoted newlines', function (t) {
-  var input = [
-    'index  name  time',
-    '1  "chris\ngrant\nbrown" 1:18',
-    '2  "stephen\nhodgins" 1:16',
-  ].join('\n');
-
-  var rows = [];
-  var parser = new sv.Parser();
-  parser.on('data', function(obj) {
-    rows.push(obj);
-  });
-  parser.end(input, function() {
-    t.equal(rows.length, 2, 'There should be exactly two rows.');
-    t.equal(rows[0].name, 'chris\ngrant\nbrown', 'Newlines should be retained.');
-    t.end();
-  });
 });

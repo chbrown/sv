@@ -22,7 +22,7 @@ test('throughput test', function (t) {
     output.push(obj);
   });
   parser.on('end', function() {
-    t.similar(input, output, 'Throughput should be transparent.');
+    t.similar(output, input, 'Throughput should be transparent.');
     t.end();
   });
 
