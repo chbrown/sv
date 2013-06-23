@@ -87,27 +87,8 @@ Parser.prototype._flush = function(callback, nonfinal) {
         // handle excel dialect: double quotechar => single literal quotechar
         if (buffer[i+1] == this.quotechar) {
           // double quotechar
-          // `inside` remains true
-          // we will collapse the "" into just a " later
-          // sourceBuffer.copy(targetBuffer, [targetStart], [sourceStart], [sourceEnd])
-          //                          i
-          //                           j        (j = i + 1)
-          // so if our source is 'hello world!' and i == 5, this splices out the space:
-          //                     'helloworld!!'
-          // note the trash at the end, so we decrement `end`
-          // buffer.copy(buffer, i, i+1);
-
           // we just advance over it for now, so that we can put this back on the buffer, if needed.
           i++;
-          // end--;
-
-          //                     'hello world!'
-          // or we could try     'hhelloworld!'   (note the trash at the beginning, so we increment start)
-          // buffer.copy(buffer,
-          // we would be looking at the quote next time if we just stopped here.
-          // i++;
-          //   but it's easier to ensure that we can shift characters to the left than to the right. right?
-          //   probably doesn't matter
         }
         else {
           // lone quotechar -> don't assume that they're always followed by a delimiter.

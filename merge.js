@@ -34,7 +34,6 @@ var merge = module.exports = function(filepaths, verbose) {
   // first pass: collect all possible fieldnames, and linecounts, while we're at it.
   async.map(filepaths, function(filepath, callback) {
     var file = new File(filepath);
-    // console.error('xf ' + file.readStream());
     var parser = file.readStream().pipe(new sv.Parser({encoding: 'utf8'}));
     var collect = function() {
       // we don't want to respond to both 'end' and 'data' calls
@@ -99,7 +98,6 @@ var merge = module.exports = function(filepaths, verbose) {
         file_out++;
         var write_result = stringifier.write(row);
         if (!write_result) console.error(file.path + ' write_result ' + write_result);
-        // console.error(file.path + ' ' + file_out + ' / ' + file.number_of_lines);
       })
       .on('end', function() {
         setTimeout(function() {
