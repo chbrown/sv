@@ -77,9 +77,11 @@ Stringifier.prototype._line = function(obj) {
     for (var j = 0; j < length; j++) {
       // assume minimal quoting (don't quote unless the cell contains the delimiter)
       var value = obj[j].toString();
-      if (value.indexOf(this.delimiter) > -1 || value.indexOf('\n') > -1 || value.indexOf('\r') > -1) {
-        if (value.indexOf(this.quotechar) > -1) {
-          // serialize into the excel dialect, currently (
+      var contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
+      var contains_quotechar = value.indexOf(this.quotechar) > -1;
+      if (value.indexOf(this.delimiter) > -1 || contains_newline || contains_quotechar) {
+        if (contains_quotechar) {
+          // serialize into the excel dialect, currently
           value = value.replace(this.quotechar_regex, this.quotechar + this.quotechar);
           // serialize with escapes:
           // value = value.replace(this.quotechar_regex, '\\' + this.quotechar);
