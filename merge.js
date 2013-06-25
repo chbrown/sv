@@ -7,7 +7,6 @@ var async = require('async');
 var sv = require('./index');
 var inference = require('./inference');
 
-
 function File(path) {
   this.path = path;
   this.columns = undefined;
@@ -51,11 +50,12 @@ var merge = module.exports = function(filepaths, verbose) {
     if (err) throw err;
 
     // uniquify all columns, starting with special field for original filename
-    var columns = ['original_file'];
+    var columns = ['pkid', 'original_file'];
     files.forEach(function(file) {
       file.columns.forEach(function(column) {
-        if (columns.indexOf(column) == -1)
+        if (columns.indexOf(column) == -1) {
           columns.push(column);
+        }
       });
     });
 
@@ -83,7 +83,7 @@ var merge = module.exports = function(filepaths, verbose) {
       process.exit(0);
     });
 
-    var total_out = 0;
+    var pkid = 1;
     var prefix = inference.commonPrefix(files.map(function(file) { return file.path; }));
     console.error('Removing common prefix from filenames: ' + prefix);
     async.eachSeries(files, function(file, callback) {
@@ -94,6 +94,7 @@ var merge = module.exports = function(filepaths, verbose) {
       file.readStream().pipe(parser)
       .on('data', function(row) {
         // first row appearing means that parser.columns is now set.
+        row.pkid = pkid++;
         row.original_file = original_file;
         file_out++;
         var write_result = stringifier.write(row);
@@ -102,12 +103,11 @@ var merge = module.exports = function(filepaths, verbose) {
       .on('end', function() {
         setTimeout(function() {
           console.error(original_file + ' (wrote ' + file_out + ' rows, out of ' + file.number_of_lines + ' lines)');
-          total_out += file_out;
           callback();
         }, 1000);
       });
     }, function(err) {
-      console.error('Done. Wrote a total of ' + total_out + ' rows.');
+      console.error('Done. Wrote a total of ' + pkid + ' rows.');
     });
   });
 };
