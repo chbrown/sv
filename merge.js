@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-'use strict'; /*jslint node: true, es5: true, indent: 2 */
+'use strict'; /*jslint node: true, es5: true, indent: 2 */ /*globals setImmediate */
 var os = require('os');
 var fs = require('fs');
 var util = require('util');
