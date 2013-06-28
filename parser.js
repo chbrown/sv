@@ -1,4 +1,5 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
+var fs = require('fs');
 var util = require('util');
 var stream = require('stream');
 var inference = require('./inference');
@@ -170,4 +171,25 @@ Parser.prototype._transform = function(chunk, encoding, callback) {
 
   // do all the processing
   this._flush(callback, true);
+};
+
+Parser.readToEnd = function(filename, opts, callback) {
+  // `opts` is optional, `callback` is required
+  //   callback signature: function(err, rows) --> rows is a list of objects
+  if (callback === undefined) {
+    callback = opts;
+    opts = undefined;
+  }
+  var rows = [];
+  var filepath = filename.replace(/^~/, process.env.HOME);
+  return fs.createReadStream(filepath, opts).pipe(new Parser(opts))
+  .on('error', function(err) {
+    callback(err);
+  })
+  .on('data', function(row) {
+    rows.push(row);
+  })
+  .on('end', function() {
+    callback(null, rows);
+  });
 };
