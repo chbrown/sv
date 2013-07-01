@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
+var async = require('async');
+var fs = require('fs');
 var os = require('os');
-var util = require('util');
 var stream = require('stream');
+var util = require('util');
+
 var inference = require('./inference');
+var merge = require('./merge');
 var Parser = exports.Parser = require('./parser');
 var Stringifier = exports.Stringifier = require('./stringifier');
 
@@ -54,16 +58,67 @@ function pluck(xs, prop) {
   return xs.map(function(x) { return x[prop]; });
 }
 
-function describe(rows, parser) {
-  // parser.columns are ordered like the original, inference.columns may not be
-  var columns = parser.columns || inference.columns(rows);
-  for (var column_index in columns) {
-    var column_name = columns[column_index];
-    console.log('[' + column_index + '] ' + column_name + ':');
-    var cells = pluck(rows, column_name);
-    console.log('  ' + cells.join(', '));
+var whitespace_literals = {
+  '\r': '\\r',
+  '\n': '\\n',
+  '\t': '\\t',
+};
+function escapeWhitespace(s) {
+  return whitespace_literals[s];
+}
+
+function describe(stream, filename, opts, callback) {
+  if (filename) {
+    console.log(filename);
   }
-  process.exit(0);
+
+  var rows = [];
+
+  var parser = stream.pipe(new Parser());
+  var onData = function(row) {
+    rows.push(row);
+    if (rows.length > 10) {
+      parser.removeListener('data', onData);
+      // parser.columns are ordered like the original, inference.columns may not be
+      var columns = parser.columns || inference.columns(rows);
+      for (var i = 0, l = parser.columns.length; i < l; i++) {
+        var name = parser.columns[i];
+        console.log('[' + i + '] ' + name + ':');
+
+        var cells = pluck(rows, name).join(', ').replace(/\r|\n|\t/g, escapeWhitespace);
+
+        var segment = opts.width - 2;
+        for (var start = 0, end = cells.length; start < end; start += segment) {
+          console.log('  ' + cells.slice(start, start + segment));
+        }
+      }
+      callback();
+    }
+  };
+  parser.on('data', onData);
+}
+
+function read(stream, filename, opts, callback) {
+  if (filename) {
+    console.error('Reading ' + filename);
+  }
+
+  stream = stream.pipe(new Parser());
+
+  if (opts.omit) {
+    stream = stream.pipe(new ObjectOmitter(opts.omit.split(/,/g)));
+  }
+
+  if (opts.filter) {
+    stream = stream.pipe(new ObjectFilter(opts.filter.split(/,/g)));
+  }
+
+  var stringifier = opts.json ? new JSONStringifier() : new Stringifier(opts);
+  stream = stream.pipe(stringifier);
+  stream = stream.pipe(process.stdout);
+
+  stream.on('finish', callback);
+  stream.on('error', callback.bind(null));
 }
 
 if (require.main === module) {
@@ -72,6 +127,7 @@ if (require.main === module) {
       'Consolidate any tabular format.',
       '',
       'Usage: <sprints.txt sv [options] > sprints.csv',
+      '   or: sv [options] ~/Desktop/**/*.csv > ~/all.csv',
       '',
       'Options:',
       '  -p, --peek 10       infer columns from first ten lines of input',
@@ -81,58 +137,63 @@ if (require.main === module) {
       '  -j, --json          write one JSON object per row',
       '      --filter a,b    keep only fields a and b in the results',
       '      --omit c,d      leave out fields x and y from the results',
-      '                      (do not use filter and omit together)',
+      '                      do not use filter and omit together',
       '      --describe      only describe the data, using headers and a few examples',
+      '      --width         width of the terminal (used by --describe)',
+      '      --merge         merge multiple files supplied as command line args',
+      '  -v  --verbose       turn up the verbosity (still all on STDERR)',
       '',
-      'Only STDIN is supported, and it is coerced to utf8',
+      'STDIN, if supplied, will be coerced to utf8',
     ].join('\n'))
-    .string('delimiter')
-    .boolean(['json', 'describe'])
+    .string(['delimiter', 'quotechar', 'escapechar'])
+    .boolean(['json', 'describe', 'merge', 'verbose'])
     .alias({
       p: 'peek',
       d: 'delimiter',
       q: 'quotechar',
       e: 'escapechar',
       j: 'json',
+      v: 'verbose',
+    })
+    .default({
+      width: process.stdout.columns || 80,
     });
   var argv = optimist.argv;
 
-  process.stdin.setEncoding('utf8');
+  var func = argv.describe ? describe : read; // function (stream, filename, opts, callback) { ... }
 
   if (argv.help) {
     optimist.showHelp();
     console.log('ARGV: ' + process.argv.join(' '));
   }
-  else if (process.stdin.isTTY) {
-    optimist.showHelp();
-    console.error('You must supply data via STDIN');
-  }
-  else if (argv.describe) {
-    // var stringifier = argv.json ? new JSONStringifier() : new Stringifier(argv);
-    var parser = process.stdin.pipe(new Parser());
-    var rows = [];
-    parser.on('data', function(row) {
-      rows.push(row);
-      if (rows.length > 10) {
-        describe(rows, parser);
-      }
+  else if (!process.stdin.isTTY) {
+    // process.stdin.setEncoding('utf8');
+    func(process.stdin, null, argv, function(err) {
+      if (err) throw err;
+      console.error('Done.');
     });
   }
-  else {
-    var stringifier = argv.json ? new JSONStringifier() : new Stringifier(argv);
-
-    process.stdin.setEncoding('utf8');
-    var parser = process.stdin.pipe(new Parser());
-    var filtered = null;
-    if (argv.filter) {
-      filtered = parser.pipe(new ObjectFilter(argv.filter.split(/,/g)));
-    }
-    else if (argv.omit) {
-      filtered = parser.pipe(new ObjectOmitter(argv.omit.split(/,/g)));
+  else if (argv._.length) {
+    if (argv.merge) {
+      console.error('Merging.');
+      merge(argv._, argv, function(err) {
+        if (err) throw err;
+        console.error('Done.');
+      });
     }
     else {
-      filtered = parser;
+      async.eachSeries(argv._, function(filepath, callback) {
+        var stream = fs.createReadStream(filepath);
+        func(stream, filepath, argv, callback);
+        console.error(''); // newline
+      }, function(err) {
+        if (err) throw err;
+        console.error('Done.');
+      });
     }
-    filtered.pipe(stringifier).pipe(process.stdout);
+  }
+  else {
+    optimist.showHelp();
+    console.error('You must supply data via STDIN or as unflagged command line arguments.');
   }
 }

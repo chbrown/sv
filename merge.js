@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 'use strict'; /*jslint node: true, es5: true, indent: 2 */ /*globals setImmediate */
-var os = require('os');
-var fs = require('fs');
-var util = require('util');
 var async = require('async');
-var sv = require('./index');
+var fs = require('fs');
 var inference = require('./inference');
+var os = require('os');
+var sv = require('./index');
+var util = require('util');
 
 function File(path) {
   this.path = path;
@@ -29,7 +29,7 @@ File.prototype.readStream = function() {
   return fs.createReadStream(this.path);
 };
 
-var merge = module.exports = function(filepaths, verbose) {
+var merge = module.exports = function(filepaths, opts, callback) {
   // first pass: collect all possible fieldnames, and linecounts, while we're at it.
   async.map(filepaths, function(filepath, callback) {
     var file = new File(filepath);
@@ -65,7 +65,7 @@ var merge = module.exports = function(filepaths, verbose) {
     }).reduce(function(a, b) { return a + b; });
 
     console.error('Found ' + total_in + ' lines covering ' + columns.length + ' columns in ' + files.length + ' files.');
-    if (verbose) {
+    if (opts.verbose) {
       console.error(columns.map(function(column) { return '  ' + column + ' (' + column.length + ')'; }).join('\n'));
     }
 
@@ -108,16 +108,7 @@ var merge = module.exports = function(filepaths, verbose) {
       });
     }, function(err) {
       console.error('Done. Wrote a total of ' + pkid + ' rows.');
+      callback(err);
     });
   });
 };
-
-if (require.main === module) {
-  var argv = require('optimist')
-    .usage([
-      'Merge several csv files into a single (sparse) csv file.',
-      '',
-      'Usage: merge.js ~/Desktop/**/*.csv > ~/all.csv',
-    ].join('\n')).boolean('verbose').alias('v', 'verbose').argv;
-  merge(argv._, argv.verbose);
-}
