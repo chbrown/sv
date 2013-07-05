@@ -161,6 +161,13 @@ if (require.main === module) {
   var argv = optimist.argv;
 
   var func = argv.describe ? describe : read; // function (stream, filename, opts, callback) { ... }
+  var exit = function(err) {
+    if (err) throw err;
+    if (argv.verbose) {
+      console.error('Done.');
+    }
+    process.exit();
+  };
 
   if (argv.help) {
     optimist.showHelp();
@@ -168,28 +175,19 @@ if (require.main === module) {
   }
   else if (!process.stdin.isTTY) {
     // process.stdin.setEncoding('utf8');
-    func(process.stdin, null, argv, function(err) {
-      if (err) throw err;
-      console.error('Done.');
-    });
+    func(process.stdin, null, argv, exit);
   }
   else if (argv._.length) {
     if (argv.merge) {
       console.error('Merging.');
-      merge(argv._, argv, function(err) {
-        if (err) throw err;
-        console.error('Done.');
-      });
+      merge(argv._, argv, exit);
     }
     else {
       async.eachSeries(argv._, function(filepath, callback) {
         var stream = fs.createReadStream(filepath);
         func(stream, filepath, argv, callback);
         console.error(''); // newline
-      }, function(err) {
-        if (err) throw err;
-        console.error('Done.');
-      });
+      }, exit);
     }
   }
   else {
