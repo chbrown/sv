@@ -16,7 +16,6 @@ test('throughput test', function (t) {
   var output = [];
   var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
 
-  // var parser = new sv.Parser();
   var parser = new sv.Parser({encoding: stringifier.encoding, quotechar: '"'});
   parser.on('data', function(obj) {
     output.push(obj);
