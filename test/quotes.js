@@ -14,7 +14,7 @@ test('excel dialect parser', function (t) {
   ].join('\n');
 
   var rows = [];
-  var parser = new sv.Parser();
+  var parser = new sv.Parser({quotechar: '"'});
   parser.on('data', function(obj) {
     rows.push(obj);
   });
@@ -36,7 +36,7 @@ test('quoted newlines', function (t) {
   ].join('\n');
 
   var rows = [];
-  var parser = new sv.Parser();
+  var parser = new sv.Parser({quotechar: '"'});
   parser.on('data', function(obj) {
     rows.push(obj);
   });
