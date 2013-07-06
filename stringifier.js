@@ -37,11 +37,11 @@ var Stringifier = module.exports = function(opts) {
   this.delimiter = opts.delimiter || ',';
   this.quotechar = opts.quotechar || '"';
   this.quotechar_regex = new RegExp(this.quotechar, 'ig');
-  this.escapechar = opts.escapechar || '\\';
+  // this.escapechar = opts.escapechar || '\\';
 
   if (opts.columns) {
     if (!util.isArray(opts.columns)) {
-      console.error('columns must be an array');
+      throw new Error("Stringifier's `columns` must be an array");
     }
     this.columns = opts.columns;
     // maybe we should write the columns even if we don't get any data?
