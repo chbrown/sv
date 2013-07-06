@@ -35,10 +35,12 @@ var Parser = module.exports = function(opts) {
   this.encoding = opts.encoding;
   this.escapechar = opts.escapechar || '\\';
   this.escapebyte = this.escapechar.charCodeAt(0);
-  this.quotechar = opts.quotechar || '"';
-  this.quotecharquotechar_regex = new RegExp(this.quotechar + this.quotechar, 'g');
-  this.escapequotechar_regex = new RegExp('\\\\' + this.quotechar, 'g');
-  this.quotebyte = this.quotechar.charCodeAt(0);
+  this.quotechar = opts.quotechar;
+  if (this.quotechar) {
+    this.quotecharquotechar_regex = new RegExp(this.quotechar + this.quotechar, 'g');
+    this.escapequotechar_regex = new RegExp('\\\\' + this.quotechar, 'g');
+    this.quotebyte = this.quotechar.charCodeAt(0);
+  }
 
   this._bytes_buffer = new Buffer(0);
   this._cells_buffer = [];
@@ -82,31 +84,30 @@ Parser.prototype._flush = function(callback, nonfinal) {
       // excel is bizarre. An escape before a quotebyte doesn't count,
       //   so we only increment if the next character is not a quotebyte
       // unless we are not inside quotes, in which case we do skip over it.
-      if (!inside_quote || buffer[i+1] != this.quotebyte) {
+      if (!inside_quote || buffer[i+1] !== this.quotebyte) {
         i++;
       }
     }
-    else if (!eos && buffer[i] == this.quotebyte) {
+    else if (!eos && buffer[i] === this.quotebyte && inside_quote) {
       // if we are inside, and on a "
-      if (inside_quote) {
-        // handle excel dialect: double quotebyte => single literal quotebyte
-        if (buffer[i+1] == this.quotebyte) {
-          // double quotebyte
-          // we just advance over it for now, so that we can put this back on the buffer, if needed.
-          i++;
-        }
-        else {
-          // lone quotebyte -> don't assume that they're always followed by a delimiter.
-          // they might be followed by a newline
-          // and we advance so that buffer[i] skips over the delimiter
-          inside_quote = false;
-          outside_quote = true;
-        }
+      // handle excel dialect: double quotebyte => single literal quotebyte
+      if (buffer[i+1] === this.quotebyte) {
+        // double quotebyte
+        // we just advance over it for now, so that we can put this back on the buffer, if needed.
+        i++;
       }
-      // if we are not inside, and on a "
       else {
-        inside_quote = true;
+        // lone quotebyte -> don't assume that they're always followed by a delimiter.
+        // they might be followed by a newline
+        // and we advance so that buffer[i] skips over the delimiter
+        inside_quote = false;
+        outside_quote = true;
       }
+    }
+    else if (!eos && buffer[i] === this.quotebyte && !inside_quote && i == start) {
+      // if we are not already inside, and on a "
+      inside_quote = true;
+      // we can only enter a quote at the edge of the cell (thus, i == start)
     }
     // otherwise we just wait for the delimiter
     else if (
@@ -123,14 +124,19 @@ Parser.prototype._flush = function(callback, nonfinal) {
       // inside_quote might be true if the file ends on a quote
       if (inside_quote || outside_quote) {
         var trimmed_cell = buffer.toString(this.encoding, start + 1, i - 1);
+        if (this.quotecharquotechar_regex) {
+          trimmed_cell = trimmed_cell.replace(this.quotecharquotechar_regex, this.quotechar);
+        }
         // is this good enough?
-        cells.push(trimmed_cell.replace(this.quotecharquotechar_regex, this.quotechar));
-        outside_quote = false;
+        cells.push(trimmed_cell);
+        outside_quote = inside_quote = false;
       }
       else {
         var cell = buffer.toString(this.encoding, start, i);
-        var dequoted_cell = cell.replace(this.escapequotechar_regex, this.quotechar);
-        cells.push(dequoted_cell);
+        if (this.escapequotechar_regex) {
+          cell = cell.replace(this.escapequotechar_regex, this.quotechar);
+        }
+        cells.push(cell);
       }
 
       // handle \r, \r\n, or \n (but not \n\n) as one line break

@@ -24,16 +24,15 @@ JSONStringifier.prototype._transform = function(chunk, encoding, callback) {
 var ObjectFilter = function(fields) {
   // objects in, objects out
   stream.Transform.call(this, {objectMode: true});
-  this.fields = {};
-  for (var i = 0, l = fields.length; i < l; i++) {
-    this.fields[fields[i]] = 1;
-  }
+  this._fields = fields;
+  this._fields_length = fields.length;
 };
 util.inherits(ObjectFilter, stream.Transform);
 ObjectFilter.prototype._transform = function(chunk, encoding, callback) {
   var filtered = {};
-  for (var field in this.fields)
-    filtered[field] = chunk[field];
+  for (var i = 0; i < this._fields_length; i++) {
+    filtered[this._fields[i]] = chunk[this._fields[i]];
+  }
   this.push(filtered, encoding);
   callback();
 };
@@ -48,8 +47,10 @@ var ObjectOmitter = function(fields) {
 };
 util.inherits(ObjectOmitter, stream.Transform);
 ObjectOmitter.prototype._transform = function(chunk, encoding, callback) {
-  for (var field in this.fields)
+
+  for (var field in this.fields) {
     delete chunk[field];
+  }
   this.push(chunk, encoding);
   callback();
 };
@@ -67,53 +68,50 @@ function escapeWhitespace(s) {
   return whitespace_literals[s];
 }
 
-function describe(stream, filename, opts, callback) {
+function describe(stream, filename, parser_opts, stringifier_opts, callback) {
   if (filename) {
     console.log(filename);
   }
 
   var rows = [];
 
-  var parser = stream.pipe(new Parser());
-  var onData = function(row) {
+  var parser = stream.pipe(new Parser(parser_opts));
+  parser.on('data', function(row) {
     rows.push(row);
     if (rows.length > 10) {
-      parser.removeListener('data', onData);
-      // parser.columns are ordered like the original, inference.columns may not be
-      var columns = parser.columns || inference.columns(rows);
+      parser.pause();
       for (var i = 0, l = parser.columns.length; i < l; i++) {
         var name = parser.columns[i];
         console.log('[' + i + '] ' + name + ':');
 
         var cells = pluck(rows, name).join(', ').replace(/\r|\n|\t/g, escapeWhitespace);
 
-        var segment = opts.width - 2;
+        var segment = stringifier_opts.width - 2;
         for (var start = 0, end = cells.length; start < end; start += segment) {
           console.log('  ' + cells.slice(start, start + segment));
         }
       }
       callback();
     }
-  };
-  parser.on('data', onData);
+  });
 }
 
-function read(stream, filename, opts, callback) {
+function read(stream, filename, parser_opts, stringifier_opts, callback) {
   if (filename) {
     console.error('Reading ' + filename);
   }
 
-  stream = stream.pipe(new Parser());
+  stream = stream.pipe(new Parser(parser_opts));
 
-  if (opts.omit) {
-    stream = stream.pipe(new ObjectOmitter(opts.omit.split(/,/g)));
+  if (stringifier_opts.omit) {
+    stream = stream.pipe(new ObjectOmitter(stringifier_opts.omit.split(/,/g)));
   }
 
-  if (opts.filter) {
-    stream = stream.pipe(new ObjectFilter(opts.filter.split(/,/g)));
+  if (stringifier_opts.filter) {
+    stream = stream.pipe(new ObjectFilter(stringifier_opts.filter.split(/,/g)));
   }
 
-  var stringifier = opts.json ? new JSONStringifier() : new Stringifier(opts);
+  var stringifier = stringifier_opts.json ? new JSONStringifier() : new Stringifier(stringifier_opts);
   stream = stream.pipe(stringifier);
   stream = stream.pipe(process.stdout);
 
@@ -129,29 +127,32 @@ if (require.main === module) {
       'Usage: <sprints.txt sv [options] > sprints.csv',
       '   or: sv [options] ~/Desktop/**/*.csv > ~/all.csv',
       '',
-      'Options:',
-      '  -p, --peek 10       infer columns from first ten lines of input',
-      '  -d, --delimiter ,   field separator',
-      '  -q, --quotechar "   mark beginning and end of fields containing delimiter',
-      '  -e, --escapechar \\  escape quotechars when quoted',
-      '  -j, --json          write one JSON object per row',
-      '      --filter a,b    keep only fields a and b in the results',
-      '      --omit c,d      leave out fields x and y from the results',
-      '                      do not use filter and omit together',
+      'Parser options:',
+      '  --peek 10         infer columns from first ten lines of input',
+      '  --in-delimiter    field separator (inferred if unspecified)',
+      '  --in-quotechar "  ',
+      // '  --escapechar \\  escape quotechars when quoted',
+      '',
+      'Stringifier options:',
+      '  --out-delimiter , field separator',
+      '  --out-quotechar " marks beginning and end of fields containing delimiter',
+      '      --filter a,b  keep only fields a and b in the results',
+      '      --omit c,d    leave out fields x and y from the results',
+      '                    omit is processed before filter',
+      '  -j, --json        write one JSON object per row',
+      '',
+      'Other options:',
       '      --describe      only describe the data, using headers and a few examples',
       '      --width         width of the terminal (used by --describe)',
       '      --merge         merge multiple files supplied as command line args',
+      '      --version       print version and quit',
       '  -v  --verbose       turn up the verbosity (still all on STDERR)',
       '',
       'STDIN, if supplied, will be coerced to utf8',
     ].join('\n'))
     .string(['delimiter', 'quotechar', 'escapechar'])
-    .boolean(['json', 'describe', 'merge', 'verbose'])
+    .boolean(['json', 'describe', 'merge', 'verbose', 'version'])
     .alias({
-      p: 'peek',
-      d: 'delimiter',
-      q: 'quotechar',
-      e: 'escapechar',
       j: 'json',
       v: 'verbose',
     })
@@ -159,23 +160,48 @@ if (require.main === module) {
       width: process.stdout.columns || 80,
     });
   var argv = optimist.argv;
+  var parser_opts = {
+    peek: argv.peek,
+    delimiter: argv['in-delimiter'],
+    quotechar: argv['in-quotechar'],
+  };
+  var stringifier_opts = {
+    delimiter: argv['out-delimiter'],
+    quotechar: argv['out-quotechar'],
+    filter: argv.filter,
+    omit: argv.omit,
+    json: argv.json,
+  };
 
-  var func = argv.describe ? describe : read; // function (stream, filename, opts, callback) { ... }
+  // func: function (stream, filename, parser_opts, stringifier_opts, callback) { ... }
+  var func = argv.describe ? describe : read;
   var exit = function(err) {
     if (err) throw err;
     if (argv.verbose) {
       console.error('Done.');
     }
-    process.exit();
+    // process.exit(); -- wait for stdout to finish, actually.
   };
 
   if (argv.help) {
     optimist.showHelp();
     console.log('ARGV: ' + process.argv.join(' '));
+    if (argv.verbose) {
+      console.log('  argv: ' + JSON.stringify(argv, null, '  ').replace(/\n/g, '\n  '));
+    }
+    console.log('  parser options: ' + JSON.stringify(parser_opts, null, '  ').replace(/\n/g, '\n  '));
+    console.log('  stringifier options: ' + JSON.stringify(stringifier_opts, null, '  ').replace(/\n/g, '\n  '));
+  }
+  else if (argv.version) {
+    fs.readFile(__dirname + '/package.json', function (err, package_string) {
+      if (err) throw err;
+      var package_json = JSON.parse(package_string);
+      console.log('v' + package_json.version);
+    });
   }
   else if (!process.stdin.isTTY) {
     // process.stdin.setEncoding('utf8');
-    func(process.stdin, null, argv, exit);
+    func(process.stdin, null, parser_opts, stringifier_opts, exit);
   }
   else if (argv._.length) {
     if (argv.merge) {
@@ -185,7 +211,7 @@ if (require.main === module) {
     else {
       async.eachSeries(argv._, function(filepath, callback) {
         var stream = fs.createReadStream(filepath);
-        func(stream, filepath, argv, callback);
+        func(stream, filepath, parser_opts, stringifier_opts, callback);
         console.error(''); // newline
       }, exit);
     }
