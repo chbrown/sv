@@ -96,27 +96,34 @@ function describe(stream, filename, parser_opts, stringifier_opts, callback) {
   });
 }
 
-function read(stream, filename, parser_opts, stringifier_opts, callback) {
+function read(input, filename, parser_opts, stringifier_opts, callback) {
   if (filename) {
     console.error('Reading ' + filename);
   }
 
-  stream = stream.pipe(new Parser(parser_opts));
+  var parser = input.pipe(new Parser(parser_opts));
 
   if (stringifier_opts.omit) {
-    stream = stream.pipe(new ObjectOmitter(stringifier_opts.omit.split(/,/g)));
+    parser = parser.pipe(new ObjectOmitter(stringifier_opts.omit.split(/,/g)));
   }
 
   if (stringifier_opts.filter) {
-    stream = stream.pipe(new ObjectFilter(stringifier_opts.filter.split(/,/g)));
+    parser = parser.pipe(new ObjectFilter(stringifier_opts.filter.split(/,/g)));
   }
 
   var stringifier = stringifier_opts.json ? new JSONStringifier() : new Stringifier(stringifier_opts);
-  stream = stream.pipe(stringifier);
-  stream = stream.pipe(process.stdout);
+  parser.pipe(stringifier);
 
-  stream.on('finish', callback);
-  stream.on('error', callback.bind(null));
+  var output = stringifier.pipe(process.stdout);
+
+  output.on('finish', callback);
+  output.on('error', function(err) {
+    // panic! (let's us quit faster, actually)
+    input.unpipe();
+    output.unpipe();
+
+    callback(err);
+  });
 }
 
 if (require.main === module) {
@@ -176,11 +183,16 @@ if (require.main === module) {
   // func: function (stream, filename, parser_opts, stringifier_opts, callback) { ... }
   var func = argv.describe ? describe : read;
   var exit = function(err) {
-    if (err) throw err;
+    if (err && err.code != 'EPIPE') {
+      throw err;
+    }
+    // if err.code == 'EPIPE' that just means that someone down
+    // the line cut us short with a | head or something
+
     if (argv.verbose) {
       console.error('Done.');
     }
-    // process.exit(); -- wait for stdout to finish, actually.
+    // process.exit(); // wait for stdout to finish, actually.
   };
 
   if (argv.help) {
