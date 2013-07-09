@@ -68,14 +68,14 @@ function escapeWhitespace(s) {
   return whitespace_literals[s];
 }
 
-function describe(stream, filename, parser_opts, stringifier_opts, callback) {
+function describe(input, filename, parser_opts, stringifier_opts, callback) {
   if (filename) {
     console.log(filename);
   }
 
   var rows = [];
 
-  var parser = stream.pipe(new Parser(parser_opts));
+  var parser = input.pipe(new Parser(parser_opts));
   parser.on('data', function(row) {
     rows.push(row);
     if (rows.length > 10) {
@@ -178,6 +178,7 @@ if (require.main === module) {
     filter: argv.filter,
     omit: argv.omit,
     json: argv.json,
+    width: argv.width,
   };
 
   // func: function (stream, filename, parser_opts, stringifier_opts, callback) { ... }
