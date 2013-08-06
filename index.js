@@ -206,11 +206,7 @@ if (require.main === module) {
     console.log('  stringifier options: ' + JSON.stringify(stringifier_opts, null, '  ').replace(/\n/g, '\n  '));
   }
   else if (argv.version) {
-    fs.readFile(__dirname + '/package.json', function (err, package_string) {
-      if (err) throw err;
-      var package_json = JSON.parse(package_string);
-      console.log('v' + package_json.version);
-    });
+    console.log(require('./package').version);
   }
   else if (!process.stdin.isTTY) {
     // process.stdin.setEncoding('utf8');
