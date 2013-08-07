@@ -77,48 +77,25 @@ And in node:
 2. Infer column names from first line of input.
 3. Handle universal newlines (`\r`, `\r\n`, or `\n`).
 
+## CLI usage
+
+    shopt -s globstar
+    for csv in ~/corpora/testsheets/**/*.csv; do
+      echo
+      file "$csv"
+      echo "Tunneling through multiple 'sv' calls should be transparent."
+      cat "$csv" | sv -j | wc -l
+      cat "$csv" | sv | sv -j | wc -l
+    done
+
 ## TODO
 
-* Does not yet support Excel-dialect (i.e. [RFC 4180](http://tools.ietf.org/html/rfc4180))
-  `""` escaped quotation markers. Those are just weird.
 * Decide how to encode a field like {id: 1, name: '"chris'},
   when the delimiter is `,` and quotechar is `"`.
   - This is weird because it doesn't *need* quoting, but without, the
     quotechar marker will trigger an `inside` state, but there's no end quote.)
 
-### Characters codes
-
-Line separators:
-
-* `\n` = 10 (newline)
-* `\r` = 13 (return)
-
-Field separators:
-
-* `\t` = 9 (tab)
-* ` ` = 32 (space)
-* `,` = 44 (comma)
-* `;` = 59 (semicolon)
-
-Field quotations:
-
-* `"` = 34 (double quote)
-* `'` = 39 (single quote)
-* <code>`</code> = 96 (backtick)
-
-Escapes:
-
-* `\` = 92 (backslash)
-
-## Debugging helper:
-
-    function logEvents(emitter, prefix, names) {
-      names.forEach(function(name) {
-        emitter.on(name, function(/*...*/) {
-          console.error(prefix + ':' + name, arguments);
-        });
-      });
-    }
+Also see the [notes](NOTES.md) for more development comments.
 
 ## License
 
