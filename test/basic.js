@@ -1,15 +1,15 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var fs = require('fs');
-var test = require('tap').test;
+var tap = require('tap');
 
 var sv = require('..');
 
-test('import', function (t) {
+tap.test('import', function (t) {
   t.ok(sv !== undefined, 'sv should load from the current directory');
   t.end();
 });
 
-test('parser', function (t) {
+tap.test('parser', function (t) {
   var input = [
     'index	name	time',
     '1	chris	1:18',
@@ -31,7 +31,7 @@ test('parser', function (t) {
   });
 });
 
-test('stringify', function (t) {
+tap.test('stringify', function (t) {
   var expected = [
     'index,name,time',
     '1,chris,NA',

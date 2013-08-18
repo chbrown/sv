@@ -1,27 +1,23 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2, multistr: true */
 var fs = require('fs');
-var test = require('tap').test;
-
+var tap = require('tap');
+var streaming = require('streaming');
 var sv = require('..');
 
-test('throughput test', function (t) {
-  var input = [
-    { index: '1', name: 'chris', time: '1:29' },
-    { index: '2', name: 'daniel', time: '1:17' },
-    { index: '3', name: 'lewis', time: '1:30' },
-    { index: '4', name: 'stephen', time: '1:16' },
-    { index: '5', name: 'larry', time: '1:31' },
-  ];
+var input = [
+  { index: '1', name: 'chris', time: '1:29' },
+  { index: '2', name: 'daniel', time: '1:17' },
+  { index: '3', name: 'lewis', time: '1:30' },
+  { index: '4', name: 'stephen', time: '1:16' },
+  { index: '5', name: 'larry', time: '1:31' },
+];
 
-  var output = [];
+tap.test('passthrough', function(t) {
   var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
-
   var parser = new sv.Parser({encoding: stringifier.encoding, quotechar: '"'});
-  parser.on('data', function(obj) {
-    output.push(obj);
-  });
-  parser.on('end', function() {
-    t.similar(output, input, 'Throughput should be transparent.');
+
+  streaming.readToEnd(parser, function(err, output) {
+    t.equivalent(output, input, 'Throughput should be transparent.');
     t.end();
   });
 
@@ -30,6 +26,51 @@ test('throughput test', function (t) {
     stringifier.write(record);
   });
   stringifier.end();
+});
+
+tap.test('filter', function(t) {
+  var parser = new sv.Parser({quotechar: '"'});
+  var filter = new streaming.Filter(['index', 'name']);
+  parser.pipe(filter);
+
+  parser.end([
+    'index,name,time',
+    '1,chris,NA',
+    '2,daniel,1:17',
+    '3,lewis,1:30',
+    '4,stephen,1:16',
+    '5,larry,1:31',
+  ].join('\n'));
+
+  streaming.readToEnd(filter, function(err, output) {
+    t.equal(output[2].name, 'lewis', 'Third row should have name of "lewis"');
+    t.notOk(output[1].time, 'No row should have a "time" field.');
+    t.ok(output[0].index, 'First row should have an "index" field.');
+    t.end();
+  });
+});
+
+
+tap.test('omitter', function(t) {
+  var parser = new sv.Parser({quotechar: '"'});
+  var omitter = new streaming.Omitter(['index', 'name']);
+  parser.pipe(omitter);
+
+  parser.end([
+    'index,name,time',
+    '1,chris,NA',
+    '2,daniel,1:17',
+    '3,lewis,1:30',
+    '4,stephen,1:16',
+    '5,larry,1:31',
+  ].join('\n'));
+
+  streaming.readToEnd(omitter, function(err, output) {
+    t.equal(output[2].time, '1:30', 'Third row should have time of "1:30"');
+    t.notOk(output[1].index, 'No row should have an "index" field.');
+    t.ok(output[0].time, 'First row should have a "time" field.');
+    t.end();
+  });
 });
 
 // var input = fs.createReadStream('test/peektest.in', {encoding: 'utf8'});

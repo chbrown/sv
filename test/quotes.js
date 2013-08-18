@@ -1,10 +1,10 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var fs = require('fs');
-var test = require('tap').test;
+var tap = require('tap');
 
 var sv = require('..');
 
-test('excel dialect parser', function (t) {
+tap.test('excel dialect parser', function (t) {
   var input = [
     'index\tname\ttime',
     '1\t"chris ""breezy"" brown"\t1:20',
@@ -28,7 +28,7 @@ test('excel dialect parser', function (t) {
   });
 });
 
-test('quoted newlines', function (t) {
+tap.test('quoted newlines', function (t) {
   var input = [
     'index  name  time',
     '1  "chris\ngrant\nbrown" 1:49',
