@@ -19,7 +19,7 @@
     "type": "git",
     "url": "git://github.com/chbrown/sv.git"
   },
-  "author": "Christopher Brown <io@henrian.com>",
+  "author": "Christopher Brown <io@henrian.com> (http://henrian.com)",
   "license": "MIT",
   "dependencies": {
     "async": "*",
