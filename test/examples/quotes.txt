@@ -1,0 +1,4 @@
+Local ID	Determined ID	TextID	TextTime	Writer Count	Writer	Text	GeoLon	GeoLat	TextPlace	TextPlaceType	For	Against	Neutral	Iffy	Irrelevant	Source	Contentful?	Ironic	Source
+	29153	129389998233773821	9/22/11		MontWilfred (Montreal Wilfred)	"Ottawa's \""Escalators\"" http://t.co/abcdef"	0	0	MISSING	MISSING									mc5546
+	29154	129389998233773823	9/22/11		MontWilfred (Montreal Wilfred)	"Ottawa's ""Escalators"" http://t.co/abcdef"	0	0	MISSING	MISSING									mc5546
+	29154	129389998233773823	9/22/11		MontWilfred (Montreal Wilfred)	"Ottawa's Escalators http://t.co/abcdef"	0	0	MISSING	MISSING									mc5546
