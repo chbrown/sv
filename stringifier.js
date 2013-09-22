@@ -7,7 +7,7 @@ var inference = require('./inference');
 /* Stringifier class
   new Stringifier();
   - `peek` is an integer (or undefined / null) describing how many rows we
-    should peek at before inferring headers and flushing.
+    should look at before inferring headers and flushing.
   - `columns` is an array of strings once the headers have been inferred
   - `encoding` is the encoding that the stream's read function will use.
   - `missing` is the value we write for 'time' when we have

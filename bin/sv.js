@@ -14,12 +14,11 @@ if (require.main === module) {
       '   or: sv [options] ~/Desktop/**/*.csv > ~/all.csv',
       '',
       'Parser options:',
-      '  --peek 10         infer columns from first ten lines of input',
       '  --in-delimiter    field separator (inferred if unspecified)',
       '  --in-quotechar "  ',
-      // '  --escapechar \\  escape quotechars when quoted',
       '',
       'Stringifier options:',
+      '  --peek 10         infer columns from first ten objects of input',
       '  --out-delimiter , field separator',
       '  --out-quotechar " marks beginning and end of fields containing delimiter',
       '  --filter a,b      keep only fields a and b in the results',
@@ -46,13 +45,13 @@ if (require.main === module) {
     });
   var argv = optimist.argv;
   var parser_opts = {
-    peek: argv.peek,
     delimiter: argv['in-delimiter'],
     quotechar: argv['in-quotechar'],
   };
   var stringifier_opts = {
     delimiter: argv['out-delimiter'],
     quotechar: argv['out-quotechar'],
+    peek: argv.peek,
     filter: argv.filter,
     omit: argv.omit,
     json: argv.json,

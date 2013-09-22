@@ -29,7 +29,7 @@ function parse() {
     'n/a,9.16'
   ].join('\n');
 
-  var parser = new sv.Parser({peek: 3});
+  var parser = new sv.Parser();
   parser.on('data', function(row) {
     console.log(row);
   });
