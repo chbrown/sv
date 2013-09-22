@@ -1,27 +1,26 @@
-'use strict'; /*jslint node: true, es5: true, indent: 2, multistr: true */
+'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var fs = require('fs');
 var tap = require('tap');
 var streaming = require('streaming');
 var sv = require('..');
 
-var input = [
-  { index: '1', name: 'chris', time: '1:29' },
-  { index: '2', name: 'daniel', time: '1:17' },
-  { index: '3', name: 'lewis', time: '1:30' },
-  { index: '4', name: 'stephen', time: '1:16' },
-  { index: '5', name: 'larry', time: '1:31' },
-];
-
 tap.test('passthrough', function(t) {
-  var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
-  var parser = new sv.Parser({encoding: stringifier.encoding, quotechar: '"'});
+  var input = [
+    { index: '1', name: 'chris', time: '1:29' },
+    { index: '2', name: 'daniel', time: '1:17' },
+    { index: '3', name: 'lewis', time: '1:30' },
+    { index: '4', name: 'stephen', time: '1:16' },
+    { index: '5', name: 'larry', time: '1:31' },
+  ];
 
+  var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
+
+  var parser = stringifier.pipe(new sv.Parser());
   streaming.readToEnd(parser, function(err, output) {
     t.equivalent(output, input, 'Throughput should be transparent.');
     t.end();
   });
 
-  stringifier.pipe(parser);
   input.forEach(function(record) {
     stringifier.write(record);
   });
@@ -29,7 +28,7 @@ tap.test('passthrough', function(t) {
 });
 
 tap.test('filter', function(t) {
-  var parser = new sv.Parser({quotechar: '"'});
+  var parser = new sv.Parser();
   var filter = new streaming.Filter(['index', 'name']);
   parser.pipe(filter);
 
@@ -52,7 +51,7 @@ tap.test('filter', function(t) {
 
 
 tap.test('omitter', function(t) {
-  var parser = new sv.Parser({quotechar: '"'});
+  var parser = new sv.Parser();
   var omitter = new streaming.Omitter(['index', 'name']);
   parser.pipe(omitter);
 

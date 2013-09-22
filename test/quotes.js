@@ -4,7 +4,7 @@ var tap = require('tap');
 
 var sv = require('..');
 
-tap.test('excel dialect parser', function (t) {
+tap.test('excel dialect parser', function(t) {
   var input = [
     'index\tname\ttime',
     '1\t"chris ""breezy"" brown"\t1:20',
@@ -14,7 +14,7 @@ tap.test('excel dialect parser', function (t) {
   ].join('\n');
 
   var rows = [];
-  var parser = new sv.Parser({quotechar: '"'});
+  var parser = new sv.Parser();
   parser.on('data', function(obj) {
     rows.push(obj);
   });
@@ -28,7 +28,7 @@ tap.test('excel dialect parser', function (t) {
   });
 });
 
-tap.test('quoted newlines', function (t) {
+tap.test('quoted newlines', function(t) {
   var input = [
     'index  name  time',
     '1  "chris\ngrant\nbrown" 1:49',
@@ -36,7 +36,7 @@ tap.test('quoted newlines', function (t) {
   ].join('\n');
 
   var rows = [];
-  var parser = new sv.Parser({quotechar: '"'});
+  var parser = new sv.Parser();
   parser.on('data', function(obj) {
     rows.push(obj);
   });

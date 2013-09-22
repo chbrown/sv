@@ -1,4 +1,4 @@
-"INDEX" "REALS" "PHRASES" "POSREALS" "INTEGERLIKE" "LOWTHO" "BINARY" "V1" "V2" "V3" "V3.1"
+"INDEX" "REALS" "PHRASES" "POSREALS" "INTEGERLIKE" "LOWTHO" "BINARY" "V1" "V2" "V3" "V4"
 1 1.08111396405569 "drive standard" 0.243504282552749 5 1 1 "not_funny" "not_funny" "funny" "not_funny"
 2 7.43280455668934 "standard cars" 0.186719195451587 4 0 0 "funny" "not_funny" "funny" "not_funny"
 3 -1.92079304728983 "waiting whatever" 0.326842429349199 6 1 0 "not_funny" "not_funny" "funny" "not_funny"

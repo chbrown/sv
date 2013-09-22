@@ -1,15 +1,16 @@
 'use strict'; /*jslint node: true, es5: true, indent: 2 */
 var fs = require('fs');
 var tap = require('tap');
+var streaming = require('streaming');
 
 var sv = require('..');
 
-tap.test('import', function (t) {
+tap.test('import', function(t) {
   t.ok(sv !== undefined, 'sv should load from the current directory');
   t.end();
 });
 
-tap.test('parser', function (t) {
+tap.test('parser', function(t) {
   var input = [
     'index	name	time',
     '1	chris	1:18',
@@ -19,19 +20,16 @@ tap.test('parser', function (t) {
     '5	larry	1:31'
   ].join('\n');
 
-  var rows = [];
-  var parser = new sv.Parser({quotechar: '"'});
-  parser.on('data', function(obj) {
-    rows.push(obj);
-  });
-  parser.end(input, function() {
+  var parser = new sv.Parser();
+  streaming.readToEnd(parser, function(err, rows) {
     t.ok(rows[2], 'There should be a third row');
     t.equal(rows[2].name, 'lewis', 'The name attribute of the third row should be "lewis"');
     t.end();
   });
+  parser.end(input);
 });
 
-tap.test('stringify', function (t) {
+tap.test('stringify', function(t) {
   var expected = [
     'index,name,time',
     '1,chris,NA',
@@ -43,12 +41,8 @@ tap.test('stringify', function (t) {
   ].join('\n');
 
   var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
-  var string = '';
-  stringifier.on('data', function(chunk) {
-    string += chunk.toString();
-  });
-  stringifier.on('end', function() {
-    t.equal(string, expected, 'Stringify output should equal expected.');
+  streaming.readToEnd(stringifier, function(err, chunks) {
+    t.equal(chunks.join(''), expected, 'Stringify output should equal expected.');
     t.end();
   });
 

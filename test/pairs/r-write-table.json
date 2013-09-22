@@ -1,0 +1,12 @@
+[
+  {"INDEX":"1","REALS":"1.08111396405569","PHRASES":"drive standard","POSREALS":"0.243504282552749","INTEGERLIKE":"5","LOWTHO":"1","BINARY":"1","V1":"not_funny","V2":"not_funny","V3":"funny","V4":"not_funny"},
+  {"INDEX":"2","REALS":"7.43280455668934","PHRASES":"standard cars","POSREALS":"0.186719195451587","INTEGERLIKE":"4","LOWTHO":"0","BINARY":"0","V1":"funny","V2":"not_funny","V3":"funny","V4":"not_funny"},
+  {"INDEX":"3","REALS":"-1.92079304728983","PHRASES":"waiting whatever","POSREALS":"0.326842429349199","INTEGERLIKE":"6","LOWTHO":"1","BINARY":"0","V1":"not_funny","V2":"not_funny","V3":"funny","V4":"not_funny"},
+  {"INDEX":"4","REALS":"21.1332844459105","PHRASES":"closed hospital","POSREALS":"0.674768296768889","INTEGERLIKE":"1","LOWTHO":"0","BINARY":"0","V1":"funny","V2":"not_funny","V3":"funny","V4":"not_funny"},
+  {"INDEX":"5","REALS":"-5.61131186361675","PHRASES":"cars speak","POSREALS":"0.575993935577571","INTEGERLIKE":"5","LOWTHO":"1","BINARY":"0","V1":"not_funny","V2":"not_funny","V3":"funny","V4":"not_funny"},
+  {"INDEX":"6","REALS":"-7.86957064397628","PHRASES":"wish whatever","POSREALS":"0.478181269252673","INTEGERLIKE":"6","LOWTHO":"1","BINARY":"0","V1":"funny","V2":"funny","V3":"funny","V4":"funny"},
+  {"INDEX":"7","REALS":"-6.4293319478403","PHRASES":"completely firm","POSREALS":"0.00687127187848091","INTEGERLIKE":"6","LOWTHO":"1","BINARY":"0","V1":"funny","V2":"not_funny","V3":"funny","V4":"funny"},
+  {"INDEX":"8","REALS":"7.44396407849582","PHRASES":"attack faith","POSREALS":"0.808862206991762","INTEGERLIKE":"6","LOWTHO":"0","BINARY":"1","V1":"funny","V2":"not_funny","V3":"funny","V4":"funny"},
+  {"INDEX":"9","REALS":"-4.91523071853168","PHRASES":"race language","POSREALS":"0.473948790924624","INTEGERLIKE":"3","LOWTHO":"1","BINARY":"1","V1":"not_funny","V2":"funny","V3":"funny","V4":"funny"},
+  {"INDEX":"10","REALS":"9.33154984003902","PHRASES":"arm covered","POSREALS":"0.0674081584438682","INTEGERLIKE":"2","LOWTHO":"2","BINARY":"1","V1":"funny","V2":"not_funny","V3":"funny","V4":"funny"}
+]
