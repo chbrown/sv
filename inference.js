@@ -55,8 +55,9 @@ var delimiter = exports.delimiter = function(buffer) {
   ];
   // TODO: make this more robust (that's why I even counted them)
   for (var candidate, j = 0; (candidate = candidates[j]); j++) {
-    if (counts[candidate] > 0)
+    if (counts[candidate] > 0) {
       return candidate;
+    }
   }
 };
 

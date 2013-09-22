@@ -4,44 +4,60 @@ var util = require('util');
 var stream = require('stream');
 var inference = require('./inference');
 
-/* Parser class
-  new Parser();
-  - `_bytes_buffer` is a buffer (of bytes) that have yet to be processed.
-  - `_cells_buffer` is a list of strings that have yet to be processed.
-  - `delimiter` is the field separator used for incoming strings.
-  - `columns` is an array of strings used as object keys.
-    * They are inferred if they are missing once the headers have been inferred.
-  - `missing` is the value we use for 'time' when we have
-    `columns = ['index', 'time']` and `write({index: 90})` is called.
-    at before inferring headers and flushing
-*/
 var Parser = module.exports = function(opts) {
+  /** new Parser(opts)
+
+  Options (`opts`):
+
+  - `encoding` for converting to strings.
+  - `missing` is the value we use for 'time' when we have `columns = ['index', 'time']` and `write({index: 90})` is called.
+  - `columns` is an array of strings used as object keys. Inferred by default (but after inferring `delimiter`)
+
+  - `delimiter` is the field separator used for incoming strings, ',' for csv, '\t' for tsv, etc.
+  - `quote` is the value that designates a string in which there might be delimiters to ignore. Defaults to '"'
+  - `escape` is the character that escapes special characters in a quoted field
+
+  Private values:
+
+  - `_bytes_buffer` is a buffer (of bytes) that have yet to be processed (and sent to output).
+  - `_cells_buffer` is a list of strings that have yet to be processed (and sent to output).
+  - etc.
+
+  */
   stream.Transform.call(this, {
     decodeStrings: true, // Writable option, ensure _transform always gets a Buffer
     objectMode: true, // Readable option, .read(n) should return a single value, rather than a Buffer
   });
-  // this._readableState.objectMode = true; // default
+  // this._readableState.objectMode = true; // default, good
   // decodeStrings: true, dammit! ()
   // stream.Transform({decodeStrings: true}) is not honored if objectMode: true,
   // because objectMode: true (intended for the Readable) overrides the decodeStrings: true
-  // if this gets fixed, you can remove the setting below.
+  // if this gets fixed, you can remove the private field setting below.
   // Issue at https://github.com/joyent/node/issues/5580
   this._writableState.objectMode = false;
 
   if (opts === undefined) opts = {};
-  this.missing = opts.missing || ''; // should be a string
-  this.delimiter = opts.delimiter;
-  this.columns = opts.columns;
-  this.encoding = opts.encoding;
-  this.escapechar = opts.escapechar || '\\';
-  this.escapebyte = this.escapechar.charCodeAt(0);
-  this.quotechar = opts.quotechar;
-  if (this.quotechar) {
-    this.quotecharquotechar_regex = new RegExp(this.quotechar + this.quotechar, 'g');
-    this.escapequotechar_regex = new RegExp('\\\\' + this.quotechar, 'g');
-    this.quotebyte = this.quotechar.charCodeAt(0);
-  }
 
+  // arbitrary settings (non-inferrable, but with sane & safe defaults)
+  this.encoding = opts.encoding;
+  this.missing_string = opts.missing || ''; // should be a string
+  this.columns = opts.columns;
+
+  // special demarcating characters
+  // 1. delimiter
+  this._delimiter_byte = opts.delimiter ? opts.delimiter.charCodeAt(0) : null;
+
+  // 2. quote
+  this._quote_string = opts.quote || '"';
+  this._quote_byte = this._quote_string.charCodeAt(0);
+  this._quotequote_regex = new RegExp(this._quote_string + this._quote_string, 'g');
+
+  // 3. escape
+  var escape_string = opts.escape || '\\';
+  this._escape_byte = escape_string.charCodeAt(0);
+  this._escapequote_regex = new RegExp('\\' + escape_string + this._quote_string, 'g');
+
+  // private storage
   this._bytes_buffer = new Buffer(0);
   this._cells_buffer = [];
 };
@@ -53,7 +69,7 @@ Parser.prototype._row = function(cells) {
     this.columns = cells;
   }
   else {
-    this.push(inference.zip(this.columns, cells, this.missing));
+    this.push(inference.zip(this.columns, cells, this.missing_string));
   }
 };
 
@@ -61,9 +77,9 @@ Parser.prototype._flush = function(callback, nonfinal) {
   var buffer = this._bytes_buffer;
   var cells = this._cells_buffer;
 
-  if (!this.delimiter) {
+  if (!this._delimiter_byte) {
     // should we wait for some minimum amount of data?
-    this.delimiter = inference.delimiter(buffer);
+    this._delimiter_byte = inference.delimiter(buffer);
   }
 
   var start = 0;
@@ -80,18 +96,18 @@ Parser.prototype._flush = function(callback, nonfinal) {
     // console.error(snippet.replace(/\n/g, 'N').replace(/\t/g, 'T'), inside_quote ? 'inside_quote' : '');
 
     // if we are on an escape char, simply skip over it (++) and the (default)
-    if (!eos && buffer[i] == this.escapebyte) {
+    if (!eos && buffer[i] == this._escape_byte) {
       // excel is bizarre. An escape before a quotebyte doesn't count,
       //   so we only increment if the next character is not a quotebyte
       // unless we are not inside quotes, in which case we do skip over it.
-      if (!inside_quote || buffer[i+1] !== this.quotebyte) {
+      if (!inside_quote || buffer[i+1] !== this._quote_byte) {
         i++;
       }
     }
-    else if (!eos && buffer[i] === this.quotebyte && inside_quote) {
+    else if (!eos && buffer[i] === this._quote_byte && inside_quote) {
       // if we are inside, and on a "
       // handle excel dialect: double quotebyte => single literal quotebyte
-      if (buffer[i+1] === this.quotebyte) {
+      if (buffer[i+1] === this._quote_byte) {
         // double quotebyte
         // we just advance over it for now, so that we can put this back on the buffer, if needed.
         i++;
@@ -104,7 +120,7 @@ Parser.prototype._flush = function(callback, nonfinal) {
         outside_quote = true;
       }
     }
-    else if (!eos && buffer[i] === this.quotebyte && !inside_quote && i == start) {
+    else if (!eos && buffer[i] === this._quote_byte && !inside_quote && i == start) {
       // if we are not already inside, and on a "
       inside_quote = true;
       // we can only enter a quote at the edge of the cell (thus, i == start)
@@ -114,7 +130,7 @@ Parser.prototype._flush = function(callback, nonfinal) {
       // if we are at the very end of the input and this is the final chunk (ignoring any sort of state)
       eos ||
       // OR, we push a new cell whenever we hit a delimiter (say, tab) and are not inside a quote
-      (!inside_quote && (buffer[i] == 13 || buffer[i] == 10 || buffer[i] == this.delimiter))
+      (!inside_quote && (buffer[i] == 13 || buffer[i] == 10 || buffer[i] == this._delimiter_byte))
       ) {
 
       // this generally won't hurt, since it will only go to the end of the buffer anyway.
@@ -124,8 +140,8 @@ Parser.prototype._flush = function(callback, nonfinal) {
       // inside_quote might be true if the file ends on a quote
       if (inside_quote || outside_quote) {
         var trimmed_cell = buffer.toString(this.encoding, start + 1, i - 1);
-        if (this.quotecharquotechar_regex) {
-          trimmed_cell = trimmed_cell.replace(this.quotecharquotechar_regex, this.quotechar);
+        if (this._quotequote_regex) {
+          trimmed_cell = trimmed_cell.replace(this._quotequote_regex, this._quote_string);
         }
         // is this good enough?
         cells.push(trimmed_cell);
@@ -133,8 +149,8 @@ Parser.prototype._flush = function(callback, nonfinal) {
       }
       else {
         var cell = buffer.toString(this.encoding, start, i);
-        if (this.escapequotechar_regex) {
-          cell = cell.replace(this.escapequotechar_regex, this.quotechar);
+        if (this._escapequote_regex) {
+          cell = cell.replace(this._escapequote_regex, this._quote_string);
         }
         cells.push(cell);
       }
@@ -142,7 +158,7 @@ Parser.prototype._flush = function(callback, nonfinal) {
       // handle \r, \r\n, or \n (but not \n\n) as one line break
       // '\r' == 13, '\n' == 10
       // we flush the row, also, if we are at the end and this is the final chunk
-      if (eos || (buffer[i] != this.delimiter)) {
+      if (eos || (buffer[i] != this._delimiter_byte)) {
         // add these cells to the emit queue
         this._row(cells);
 

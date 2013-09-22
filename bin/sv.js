@@ -59,7 +59,7 @@ if (require.main === module) {
     width: argv.width,
   };
 
-  // func: function (stream, filename, parser_opts, stringifier_opts, callback) { ... }
+  // func: function(stream, filename, parser_opts, stringifier_opts, callback) { ... }
   var func = argv.describe ? sv.describe : sv.transform;
   var exit = function(err) {
     if (err && err.code != 'EPIPE') {
