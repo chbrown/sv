@@ -13,9 +13,9 @@ var inference = require('./inference');
   - `missing` is the value we write for 'time' when we have
     `columns = ['index', 'time']` and `write({index: 90})` is called
 
-  - `delimiter` is the field separator
+  - `delimiter` is the field separator (defaults to a comma)
   - `quotechar` is the character used to quote fields if they contain the
-    `delimiter` character.
+    `delimiter` character (defaults to a double-quote)
 
   - `_buffer` is an array of arrays or objects that need to be written
 */
