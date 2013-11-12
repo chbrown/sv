@@ -56,11 +56,11 @@ var transform = exports.transform = function(input, filename, parser_opts, strin
   var parser = input.pipe(new Parser(parser_opts));
 
   if (stringifier_opts.omit) {
-    parser = parser.pipe(new streaming.Omitter(stringifier_opts.omit.split(/,/g)));
+    parser = parser.pipe(new streaming.property.Omitter(stringifier_opts.omit.split(/,/g)));
   }
 
   if (stringifier_opts.filter) {
-    parser = parser.pipe(new streaming.Filter(stringifier_opts.filter.split(/,/g)));
+    parser = parser.pipe(new streaming.property.Filter(stringifier_opts.filter.split(/,/g)));
   }
 
   var stringifier = stringifier_opts.json ? new streaming.json.Stringifier() : new Stringifier(stringifier_opts);

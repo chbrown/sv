@@ -29,7 +29,7 @@ tap.test('passthrough', function(t) {
 
 tap.test('filter', function(t) {
   var parser = new sv.Parser();
-  var filter = new streaming.Filter(['index', 'name']);
+  var filter = new streaming.property.Filter(['index', 'name']);
   parser.pipe(filter);
 
   parser.end([
@@ -52,7 +52,7 @@ tap.test('filter', function(t) {
 
 tap.test('omitter', function(t) {
   var parser = new sv.Parser();
-  var omitter = new streaming.Omitter(['index', 'name']);
+  var omitter = new streaming.property.Omitter(['index', 'name']);
   parser.pipe(omitter);
 
   parser.end([

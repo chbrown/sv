@@ -24,7 +24,7 @@
   "dependencies": {
     "async": "*",
     "optimist": "*",
-    "streaming": "*"
+    "streaming": ">=0.3.7"
   },
   "devDependencies": {
     "tap": "*"
