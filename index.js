@@ -53,7 +53,7 @@ var transform = exports.transform = function(input, filename, parser_opts, strin
     console.error('Transforming ' + filename);
   }
 
-  var parser = input.pipe(new Parser(parser_opts));
+  var parser = input.pipe((parser_opts.json) ? new streaming.json.Parser() : new Parser(parser_opts));
 
   if (stringifier_opts.omit) {
     parser = parser.pipe(new streaming.property.Omitter(stringifier_opts.omit.split(/,/g)));

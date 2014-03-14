@@ -16,6 +16,7 @@ if (require.main === module) {
       'Parser options:',
       '  --in-delimiter    field separator (inferred if unspecified)',
       '  --in-quotechar "  ',
+      '  --in-json         parse input as JSON (one object per row)',
       '',
       'Stringifier options:',
       '  --peek 10         infer columns from first ten objects of input',
@@ -35,7 +36,7 @@ if (require.main === module) {
       'STDIN, if supplied, will be coerced to utf8',
     ].join('\n'))
     .string(['delimiter', 'quotechar', 'escapechar'])
-    .boolean(['json', 'describe', 'merge', 'verbose', 'version'])
+    .boolean(['json', 'describe', 'merge', 'verbose', 'version', 'in-json'])
     .alias({
       j: 'json',
       v: 'verbose',
@@ -47,6 +48,7 @@ if (require.main === module) {
   var parser_opts = {
     delimiter: argv['in-delimiter'],
     quotechar: argv['in-quotechar'],
+    json: argv['in-json'],
   };
   var stringifier_opts = {
     delimiter: argv['out-delimiter'],
