@@ -54,7 +54,7 @@ var Stringifier = module.exports = function(opts) {
 util.inherits(Stringifier, stream.Transform);
 
 Stringifier.prototype._line = function(obj) {
-  // _write is already <a href=""></a> thing, so don't use it.
+  // _write is already a thing, so don't use it.
   // this.columns must be set!
   if (typeof(obj) === 'string') {
     // raw string
@@ -99,9 +99,10 @@ Stringifier.prototype._lines = function(objs) {
     this._line(objs[i]);
   }
 };
-Stringifier.prototype._flush = function(callback) {
-  // called when we're done peeking or when end() is called
-  // (in which case we are done peeking, but for a different reason)
+Stringifier.prototype.flush = function(callback, nonfinal) {
+  // called when we're done peeking (nonfinal = true) or when end() is
+  // called (nonfinal = false), in which case we are done peeking, but for a
+  // different reason. In either case, we need to flush the peeked columns.
   if (!this.columns) {
     // infer columns
     this.columns = inference.columns(this._buffer);
@@ -111,11 +112,16 @@ Stringifier.prototype._flush = function(callback) {
   if (this._buffer) {
     // flush the _buffer
     this._lines(this._buffer);
-    // a null _buffer means we're done peaking and won't be buffering any more rows
+    // a null _buffer means we're done peeking and won't be buffering any more rows
     this._buffer = null;
   }
   // this.push(null); // inferred
   callback();
+};
+// the docs decree that we shouldn't call _flush directly
+// Stringifier.prototype._flush = Stringifier.prototype.flush;
+Stringifier.prototype._flush = function(callback) {
+  return this.flush(callback, false);
 };
 
 Stringifier.prototype._transform = function(chunk, encoding, callback) {
@@ -133,7 +139,7 @@ Stringifier.prototype._transform = function(chunk, encoding, callback) {
     // if set {peek: 10}, column inference will be called when write(obj) is called the 10th time
     this._buffer.push(chunk);
     if (this._buffer.length >= this.peek) {
-      this._flush(callback);
+      this.flush(callback, true);
     }
     else {
       callback();

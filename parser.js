@@ -73,7 +73,7 @@ Parser.prototype._row = function(cells) {
   }
 };
 
-Parser.prototype._flush = function(callback, nonfinal) {
+Parser.prototype.flush = function(callback, nonfinal) {
   var buffer = this._bytes_buffer;
   var cells = this._cells_buffer;
 
@@ -181,6 +181,10 @@ Parser.prototype._flush = function(callback, nonfinal) {
   // if there was a trailing newline, this._buffer.length = 0
   callback();
 };
+// Parser.prototype._flush = Parser.prototype.flush;
+Parser.prototype._flush = function(callback) {
+  return this.flush(callback, false);
+};
 
 Parser.prototype._transform = function(chunk, encoding, callback) {
   // we'll assume that we always get chunks with the same encoding.
@@ -192,7 +196,7 @@ Parser.prototype._transform = function(chunk, encoding, callback) {
   this._bytes_buffer = this._bytes_buffer.length ? Buffer.concat([this._bytes_buffer, chunk]) : chunk;
 
   // do all the processing
-  this._flush(callback, true);
+  this.flush(callback, true);
 };
 
 Parser.readToEnd = function(filename, opts, callback) {
