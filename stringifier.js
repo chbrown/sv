@@ -66,9 +66,11 @@ Stringifier.prototype._line = function(obj) {
     if (!util.isArray(obj)) {
       // object
       length = this.columns.length;
+      // pull properties off the given object in proper column order
       var list = new Array(length);
       for (var i = 0; i < length; i++) {
-        list[i] = obj[this.columns[i]] || this.missing;
+        var column_value = obj[this.columns[i]];
+        list[i] = (column_value === undefined) ? this.missing : column_value;
       }
       obj = list;
     }
