@@ -27,7 +27,7 @@
     "streaming": ">=0.3.7"
   },
   "devDependencies": {
-    "tap": "*"
+    "tap": "~0.7.1"
   },
   "scripts": {
     "test": "tap test"
