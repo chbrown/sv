@@ -1,10 +1,20 @@
-'use strict'; /*jslint node: true, es5: true, indent: 2 */
-var os = require('os');
-var stream = require('stream');
-var util = require('util');
-var inference = require('./inference');
-
-/* Stringifier class
+var __extends = (this && this.__extends) || function (d, b) {
+    for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
+    function __() { this.constructor = d; }
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+};
+var stream_1 = require('stream');
+var common_1 = require('./common');
+exports.defaultStringifierConfiguration = {
+    encoding: 'utf8',
+    missing: '',
+    newline: '\n',
+    delimiter: ',',
+    quotechar: '"',
+    escape: '\\',
+    peek: 1,
+};
+/** Stringifier class
   new Stringifier();
   - `peek` is an integer (or undefined / null) describing how many rows we
     should look at before inferring headers and flushing.
@@ -19,132 +29,114 @@ var inference = require('./inference');
 
   - `_buffer` is an array of arrays or objects that need to be written
 */
-var Stringifier = module.exports = function(opts) {
-  stream.Transform.call(this, {
-    objectMode: true,
-  });
-  // we want:
-  // Readable({objectMode: false})
-  // Writable({objectMode: true})
-  this._readableState.objectMode = false;
-
-  if (opts === undefined) opts = {};
-  this.encoding = opts.encoding || 'utf8';
-  this.peek = opts.peek || 1; // should this even be 1? (ignored if opts.columns)
-  this.missing = opts.missing || ''; // should be a string
-
-  this.newline = opts.newline || os.EOL;
-  this.delimiter = opts.delimiter || ',';
-  this.quotechar = opts.quotechar || '"';
-  this.quotechar_regex = new RegExp(this.quotechar, 'ig');
-  // this.escapechar = opts.escapechar || '\\';
-
-  if (opts.columns) {
-    if (!util.isArray(opts.columns)) {
-      throw new Error("Stringifier's `columns` must be an array");
-    }
-    this.columns = opts.columns;
-    // maybe we should write the columns even if we don't get any data?
-    this._buffer = [this.columns];
-  }
-  else {
-    this._buffer = [];
-  }
-};
-util.inherits(Stringifier, stream.Transform);
-
-Stringifier.prototype._line = function(obj) {
-  // _write is already a thing, so don't use it.
-  // this.columns must be set!
-  if (typeof(obj) === 'string') {
-    // raw string
-    this.push(obj + this.newline, this.encoding);
-  }
-  else {
-    // if obj is an array, we ignore this.columns
-    var length = obj.length;
-    if (!util.isArray(obj)) {
-      // object
-      length = this.columns.length;
-      // pull properties off the given object in proper column order
-      var list = new Array(length);
-      for (var i = 0; i < length; i++) {
-        var column_value = obj[this.columns[i]];
-        list[i] = (column_value === undefined) ? this.missing : column_value;
-      }
-      obj = list;
-    }
-
-    // obj is definitely an array now, but the fields aren't quoted.
-    for (var j = 0; j < length; j++) {
-      // assume minimal quoting (don't quote unless the cell contains the delimiter)
-      var value = obj[j].toString();
-      var contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
-      var contains_quotechar = value.indexOf(this.quotechar) > -1;
-      if (value.indexOf(this.delimiter) > -1 || contains_newline || contains_quotechar) {
-        if (contains_quotechar) {
-          // serialize into the excel dialect, currently
-          value = value.replace(this.quotechar_regex, this.quotechar + this.quotechar);
-          // serialize with escapes:
-          // value = value.replace(this.quotechar_regex, '\\' + this.quotechar);
+var Stringifier = (function (_super) {
+    __extends(Stringifier, _super);
+    function Stringifier(config) {
+        if (config === void 0) { config = {}; }
+        _super.call(this, { objectMode: true });
+        this.rowBuffer = [];
+        // we want:
+        // Readable({objectMode: false})
+        // Writable({objectMode: true})
+        this['_readableState'].objectMode = false;
+        this.config = common_1.merge(config, exports.defaultStringifierConfiguration);
+        this.quotecharRegExp = new RegExp(this.config.quotechar, 'ig');
+        if (this.config.columns) {
+            // maybe we should write the columns even if we don't get any data?
+            this.rowBuffer = [this.config.columns];
         }
-        value = this.quotechar + value + this.quotechar;
-      }
-      obj[j] = value;
+        else {
+            this.rowBuffer = [];
+        }
     }
-
-    this.push(obj.join(this.delimiter) + this.newline, this.encoding);
-  }
-};
-Stringifier.prototype._lines = function(objs) {
-  for (var i = 0, l = objs.length; i < l; i++) {
-    this._line(objs[i]);
-  }
-};
-Stringifier.prototype.flush = function(callback, nonfinal) {
-  // called when we're done peeking (nonfinal = true) or when end() is
-  // called (nonfinal = false), in which case we are done peeking, but for a
-  // different reason. In either case, we need to flush the peeked columns.
-  if (!this.columns) {
-    // infer columns
-    this.columns = inference.columns(this._buffer);
-    this._line(this.columns);
-  }
-
-  if (this._buffer) {
-    // flush the _buffer
-    this._lines(this._buffer);
-    // a null _buffer means we're done peeking and won't be buffering any more rows
-    this._buffer = null;
-  }
-  // this.push(null); // inferred
-  callback();
-};
-// the docs decree that we shouldn't call _flush directly
-// Stringifier.prototype._flush = Stringifier.prototype.flush;
-Stringifier.prototype._flush = function(callback) {
-  return this.flush(callback, false);
-};
-
-Stringifier.prototype._transform = function(chunk, encoding, callback) {
-  // objectMode: true, so chunk is an object (and encoding is always 'utf8'?)
-  if (this.columns) {
-    // flush the _buffer, if needed
-    if (this._buffer) {
-      this._lines(this._buffer);
-      this._buffer = null;
-    }
-    this._line(chunk);
-    callback();
-  }
-  else {
-    // if set {peek: 10}, column inference will be called when write(obj) is called the 10th time
-    this._buffer.push(chunk);
-    if (this._buffer.length >= this.peek) {
-      this.flush(callback, true);
-    }
-    else {
-      callback();
-    }
-  }
-};
+    Stringifier.prototype.writeObject = function (object) {
+        // _write is already a thing, so don't use it.
+        // this.columns must be set!
+        if (typeof (object) === 'string') {
+            // raw string
+            this.push(object + this.config.newline, this.config.encoding);
+        }
+        else {
+            // if object is an array, we ignore this.columns
+            var length = object.length;
+            if (!Array.isArray(object)) {
+                // object
+                length = this.config.columns.length;
+                // pull properties off the given object in proper column order
+                var list = new Array(length);
+                for (var i = 0; i < length; i++) {
+                    var column_value = object[this.config.columns[i]];
+                    list[i] = (column_value === undefined) ? this.config.missing : column_value;
+                }
+                object = list;
+            }
+            // obj is definitely an array now, but the fields aren't quoted.
+            for (var j = 0; j < length; j++) {
+                // assume minimal quoting (don't quote unless the cell contains the delimiter)
+                var value = object[j].toString();
+                var contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
+                var contains_quotechar = value.indexOf(this.config.quotechar) > -1;
+                if (value.indexOf(this.config.delimiter) > -1 || contains_newline || contains_quotechar) {
+                    if (contains_quotechar) {
+                        // serialize into the excel dialect, currently
+                        value = value.replace(this.quotecharRegExp, this.config.quotechar + this.config.quotechar);
+                    }
+                    value = this.config.quotechar + value + this.config.quotechar;
+                }
+                object[j] = value;
+            }
+            this.push(object.join(this.config.delimiter) + this.config.newline, this.config.encoding);
+        }
+    };
+    Stringifier.prototype.writeObjects = function (objects) {
+        for (var i = 0, l = objects.length; i < l; i++) {
+            this.writeObject(objects[i]);
+        }
+    };
+    Stringifier.prototype.flush = function (callback, nonfinal) {
+        // called when we're done peeking (nonfinal = true) or when end() is
+        // called (nonfinal = false), in which case we are done peeking, but for a
+        // different reason. In either case, we need to flush the peeked columns.
+        if (!this.config.columns) {
+            // infer columns
+            this.config.columns = common_1.inferColumns(this.rowBuffer);
+            this.writeObject(this.config.columns);
+        }
+        if (this.rowBuffer) {
+            // flush the _buffer
+            this.writeObjects(this.rowBuffer);
+            // a null _buffer means we're done peeking and won't be buffering any more rows
+            this.rowBuffer = null;
+        }
+        // this.push(null); // inferred
+        callback();
+    };
+    // the docs decree that we shouldn't call _flush directly
+    Stringifier.prototype._flush = function (callback) {
+        return this.flush(callback, false);
+    };
+    Stringifier.prototype._transform = function (chunk, encoding, callback) {
+        // objectMode: true, so chunk is an object (and encoding is always 'utf8'?)
+        if (this.config.columns) {
+            // flush the _buffer, if needed
+            if (this.rowBuffer) {
+                this.writeObjects(this.rowBuffer);
+                this.rowBuffer = null;
+            }
+            this.writeObject(chunk);
+            callback();
+        }
+        else {
+            // if set {peek: 10}, column inference will be called when write(obj) is called the 10th time
+            this.rowBuffer.push(chunk);
+            if (this.rowBuffer.length >= this.config.peek) {
+                this.flush(callback, true);
+            }
+            else {
+                callback();
+            }
+        }
+    };
+    return Stringifier;
+})(stream_1.Transform);
+exports.Stringifier = Stringifier;

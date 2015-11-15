@@ -11,25 +11,28 @@
     "tabular",
     "tables"
   ],
-  "bin": {
-    "sv": "bin/sv.js"
-  },
   "homepage": "https://github.com/chbrown/sv",
   "repository": {
     "type": "git",
-    "url": "git://github.com/chbrown/sv.git"
+    "url": "https://github.com/chbrown/sv.git"
   },
   "author": "Christopher Brown <io@henrian.com> (http://henrian.com)",
   "license": "MIT",
   "dependencies": {
     "async": "*",
     "optimist": "*",
-    "streaming": ">=0.3.7"
+    "streaming": "*"
   },
   "devDependencies": {
-    "tap": "~0.7.1"
+    "babel-core": "^5.0.0",
+    "declarations": "*",
+    "mocha": "*",
+    "typescript": "next"
   },
   "scripts": {
-    "test": "tap test"
+    "test": "mocha test"
+  },
+  "bin": {
+    "sv": "bin/sv"
   }
 }

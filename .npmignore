@@ -1,0 +1,9 @@
+docs/
+tests/
+.travis.yml
+common.ts
+index.ts
+Makefile
+parser.ts
+stringifier.ts
+tsconfig.json
