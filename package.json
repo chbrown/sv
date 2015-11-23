@@ -30,7 +30,7 @@
     "typescript": "next"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "make test"
   },
   "bin": {
     "sv": "bin/sv"
