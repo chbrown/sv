@@ -14,6 +14,26 @@ exports.defaultStringifierConfiguration = {
     escape: '\\',
     peek: 1,
 };
+function inferColumns(rows) {
+    var columns = [];
+    var seen = {};
+    rows.forEach(function (row) {
+        // each object might be a string, array, or object, but only objects matter here.
+        if (typeof (row) !== 'string' && !Array.isArray(row)) {
+            Object.keys(row).forEach(function (key) {
+                // if (row.hasOwnProperty(key)) {
+                // maybe should also check that row[key] != null
+                if (!(key in seen)) {
+                    columns.push(key);
+                    seen[key] = 1;
+                }
+                // }
+            });
+        }
+    });
+    return columns;
+}
+exports.inferColumns = inferColumns;
 /** Stringifier class
   new Stringifier();
   - `peek` is an integer (or undefined / null) describing how many rows we
@@ -99,7 +119,7 @@ var Stringifier = (function (_super) {
         // different reason. In either case, we need to flush the peeked columns.
         if (!this.config.columns) {
             // infer columns
-            this.config.columns = common_1.inferColumns(this.rowBuffer);
+            this.config.columns = inferColumns(this.rowBuffer);
             this.writeObject(this.config.columns);
         }
         if (this.rowBuffer) {

@@ -1,5 +1,5 @@
 import {Transform} from 'stream';
-import {Configuration, inferColumns, merge} from './common';
+import {Configuration, merge} from './common';
 
 export interface StringifierConfiguration extends Configuration {
   peek?: number;
@@ -15,6 +15,25 @@ export const defaultStringifierConfiguration = {
   peek: 1,
 }
 
+export function inferColumns(rows: string[][]) {
+  var columns: string[] = [];
+  var seen = {};
+  rows.forEach(row => {
+    // each object might be a string, array, or object, but only objects matter here.
+    if (typeof(row) !== 'string' && !Array.isArray(row)) {
+      Object.keys(row).forEach(key => {
+        // if (row.hasOwnProperty(key)) {
+        // maybe should also check that row[key] != null
+        if (!(key in seen)) {
+          columns.push(key);
+          seen[key] = 1;
+        }
+        // }
+      });
+    }
+  });
+  return columns;
+}
 
 /** Stringifier class
   new Stringifier();
