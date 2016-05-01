@@ -16,8 +16,8 @@ export const defaultStringifierConfiguration = {
 }
 
 export function inferColumns(rows: string[][]) {
-  var columns: string[] = [];
-  var seen = {};
+  const columns: string[] = [];
+  const seen: {[index: string]: number} = {};
   rows.forEach(row => {
     // each object might be a string, array, or object, but only objects matter here.
     if (typeof(row) !== 'string' && !Array.isArray(row)) {
@@ -57,11 +57,7 @@ export class Stringifier extends Transform {
   protected rowBuffer: string[][] = [];
 
   constructor(config: StringifierConfiguration = {}) {
-    super({objectMode: true});
-    // we want:
-    // Readable({objectMode: false})
-    // Writable({objectMode: true})
-    this['_readableState'].objectMode = false;
+    super(<any>{readableObjectMode: false, writableObjectMode: true});
 
     this.config = merge(config, defaultStringifierConfiguration);
 
@@ -85,25 +81,25 @@ export class Stringifier extends Transform {
     }
     else {
       // if object is an array, we ignore this.columns
-      var length = object.length;
+      let length = object.length;
       if (!Array.isArray(object)) {
         // object
         length = this.config.columns.length;
         // pull properties off the given object in proper column order
-        var list = new Array(length);
-        for (var i = 0; i < length; i++) {
-          var column_value = object[this.config.columns[i]];
+        const list = new Array(length);
+        for (let i = 0; i < length; i++) {
+          const column_value = object[this.config.columns[i]];
           list[i] = (column_value === undefined) ? this.config.missing : column_value;
         }
         object = list;
       }
 
       // obj is definitely an array now, but the fields aren't quoted.
-      for (var j = 0; j < length; j++) {
+      for (let j = 0; j < length; j++) {
         // assume minimal quoting (don't quote unless the cell contains the delimiter)
-        var value = object[j].toString();
-        var contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
-        var contains_quotechar = value.indexOf(this.config.quotechar) > -1;
+        let value = object[j].toString();
+        const contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
+        const contains_quotechar = value.indexOf(this.config.quotechar) > -1;
         if (value.indexOf(this.config.delimiter) > -1 || contains_newline || contains_quotechar) {
           if (contains_quotechar) {
             // serialize into the excel dialect, currently
@@ -121,12 +117,12 @@ export class Stringifier extends Transform {
   }
 
   protected writeObjects(objects: any[]) {
-    for (var i = 0, l = objects.length; i < l; i++) {
+    for (let i = 0, l = objects.length; i < l; i++) {
       this.writeObject(objects[i]);
     }
   }
 
-  flush(callback, nonfinal) {
+  flush(callback: (error?: Error) => void, nonfinal: boolean) {
     // called when we're done peeking (nonfinal = true) or when end() is
     // called (nonfinal = false), in which case we are done peeking, but for a
     // different reason. In either case, we need to flush the peeked columns.
@@ -147,11 +143,11 @@ export class Stringifier extends Transform {
   }
 
   // the docs decree that we shouldn't call _flush directly
-  _flush(callback) {
+  _flush(callback: (error?: Error) => void) {
     return this.flush(callback, false);
   }
 
-  _transform(chunk, encoding, callback) {
+  _transform(chunk: any, encoding: string, callback: (error?: Error) => void) {
     // objectMode: true, so chunk is an object (and encoding is always 'utf8'?)
     if (this.config.columns) {
       // flush the _buffer, if needed

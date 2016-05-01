@@ -24,15 +24,17 @@
     "streaming": "*"
   },
   "devDependencies": {
-    "babel-core": "^5.0.0",
+    "coveralls": "*",
     "declarations": "*",
+    "istanbul": "*",
     "mocha": "*",
+    "mocha-lcov-reporter": "*",
     "typescript": "*"
   },
   "scripts": {
     "test": "make test"
   },
   "bin": {
-    "sv": "bin/sv"
+    "sv": "bin/sv.js"
   }
 }

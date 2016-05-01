@@ -27,7 +27,7 @@ export interface Configuration {
 /**
 Like reverse Object.assign, but with special treatment for undefined.
 */
-export function merge(target, ...sources) {
+export function merge(target: {[index: string]: any}, ...sources: {[index: string]: any}[]) {
   sources.forEach(source => {
     Object.keys(source).filter(key => source.hasOwnProperty(key)).forEach(key => {
       if (target[key] === undefined) {
@@ -38,40 +38,10 @@ export function merge(target, ...sources) {
   return target;
 }
 
-export function zip(keys, values, missing) {
-  var obj = {};
-  for (var i = 0, l = keys.length; i < l; i++) {
-    obj[keys[i]] = values[i] || missing;
+export function zip<T>(keys: string[], values: T[], missing: T) {
+  const object: {[index: string]: T} = {};
+  for (let i = 0, l = keys.length; i < l; i++) {
+    object[keys[i]] = values[i] || missing;
   }
-  return obj;
-}
-
-export function commonPrefix(filepaths) {
-  var prefix = filepaths[0];
-  for (var filepath, i = 1; (filepath = filepaths[i]) && prefix.length; i++) {
-    for (var c = 0; prefix[c] == filepath[c]; c++);
-    prefix = prefix.slice(0, c);
-  }
-  return prefix;
-}
-
-export function countLinebreaks(stream, callback: (error: Error, lines: number) => void) {
-  var count = 0;
-  stream
-  .on('data', buffer => {
-    for (var i = 0; i < buffer.length; i++) {
-      // universal newlines: handle \r (13), \r\n (13, 10), or \n (10) as one line break
-      if (buffer[i] == 13) {
-        count++;
-        if (buffer[i+1] == 10) {
-          i++;
-        }
-      }
-      else if (buffer[i] == 10) {
-        count++;
-      }
-    }
-  })
-  .on('end', () => callback(null, count))
-  .on('error', err => callback(err, count));
+  return object;
 }

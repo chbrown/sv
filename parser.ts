@@ -16,25 +16,25 @@ export const defaultParserConfiguration: ParserConfiguration = {
 returns a single char code (a byte) denoting the inferred delimiter.
 */
 export function inferDelimiter(buffer: Buffer): number {
-  var counts = {};
+  const counts: {[index: string]: number} = {};
   // we look at the first newline or 256 chars, whichever is greater,
   //   but without going through the whole file
-  var upto = Math.min(256, buffer.length);
-  for (var i = 0; i < upto && buffer[i] != 10 && buffer[i] != 13; i++) {
-    var char_code = buffer[i];
-    counts[char_code] = (counts[char_code] || 0) + 1;
+  const upto = Math.min(256, buffer.length);
+  for (let i = 0; i < upto && buffer[i] != 10 && buffer[i] != 13; i++) {
+    const charCode = buffer[i];
+    counts[charCode] = (counts[charCode] || 0) + 1;
   }
 
   // we'll go through, prioritizing characters that aren't likely to show
   // up unless they are a delimiter.
-  var candidates = [
+  const candidates = [
     9, // '\t' (tab)
     59, // ';' (semicolon)
     44, // ',' (comma)
     32, // ' ' (space)
   ];
   // TODO: make this more robust (that's why I even counted them)
-  for (var candidate, j = 0; (candidate = candidates[j]); j++) {
+  for (let candidate: number, j = 0; (candidate = candidates[j]); j++) {
     if (counts[candidate] > 0) {
       return candidate;
     }
@@ -57,17 +57,11 @@ export class Parser extends Transform {
   cellBuffer: string[] = [];
 
   constructor(config: ParserConfiguration = {}) {
-    super({
+    super(<any>{
       decodeStrings: true, // Writable option, ensure _transform always gets a Buffer
-      objectMode: true, // Readable option, .read(n) should return a single value, rather than a Buffer
+      readableObjectMode: true, // Readable option, .read(n) should return a single value, rather than a Buffer
+      writableObjectMode: false,
     });
-    // this._readableState.objectMode = true; // default, good
-    // decodeStrings: true, dammit! ()
-    // stream.Transform({decodeStrings: true}) is not honored if objectMode: true,
-    // because objectMode: true (intended for the Readable) overrides the decodeStrings: true
-    // if this gets fixed, you can remove the private field setting below.
-    // Issue at https://github.com/joyent/node/issues/5580
-    this['_writableState'].objectMode = false;
 
     // merge defaults
     this.config = merge(config, defaultParserConfiguration);
@@ -87,7 +81,7 @@ export class Parser extends Transform {
     this.escapeQuoteRegExp = new RegExp('\\' + this.config.escape + this.config.quotechar, 'g');
   }
 
-  protected writeRow(cells) {
+  protected writeRow(cells: string[]) {
     if (!this.config.columns) {
       // we don't emit the column names as data
       this.config.columns = cells;
@@ -97,24 +91,24 @@ export class Parser extends Transform {
     }
   }
 
-  flush(callback, nonfinal) {
-    var buffer = this.byteBuffer;
-    var cells = this.cellBuffer;
+  flush(callback: (error?: Error) => void, nonfinal: boolean) {
+    const buffer = this.byteBuffer;
+    let cells = this.cellBuffer;
 
     if (!this.delimiterByte) {
       // should we wait for some minimum amount of data?
       this.delimiterByte = inferDelimiter(buffer);
     }
 
-    var start = 0;
-    var end = buffer.length;
-    var inside_quote = false;
+    let start = 0;
+    let end = buffer.length;
+    let inside_quote = false;
     // outside_quote reminds us to remove the quotes later (in pushCell)
-    var outside_quote = false;
+    let outside_quote = false;
 
-    for (var i = 0; i < end; i++) {
-      var eos = !nonfinal && i + 1 == end;
-      // var snippet = buffer.toString('utf8', 0, i) +
+    for (let i = 0; i < end; i++) {
+      const eos = !nonfinal && i + 1 == end;
+      // const snippet = buffer.toString('utf8', 0, i) +
       //   '\x1b[7m' + buffer.toString('utf8', i, i + 1) + '\x1b[0m' +
       //   buffer.toString('utf8', i + 1, end);
       // console.error(snippet.replace(/\n/g, 'N').replace(/\t/g, 'T'), inside_quote ? 'inside_quote' : '');
@@ -163,7 +157,7 @@ export class Parser extends Transform {
         // add the unprocessed buffer to our cells
         // inside_quote might be true if the file ends on a quote
         if (inside_quote || outside_quote) {
-          var trimmed_cell = buffer.toString(this.config.encoding, start + 1, i - 1);
+          let trimmed_cell = buffer.toString(this.config.encoding, start + 1, i - 1);
           if (this.quotequoteRegExp) {
             trimmed_cell = trimmed_cell.replace(this.quotequoteRegExp, this.config.quotechar);
           }
@@ -172,7 +166,7 @@ export class Parser extends Transform {
           outside_quote = inside_quote = false;
         }
         else {
-          var cell = buffer.toString(this.config.encoding, start, i);
+          let cell = buffer.toString(this.config.encoding, start, i);
           if (this.escapeQuoteRegExp) {
             cell = cell.replace(this.escapeQuoteRegExp, this.config.quotechar);
           }
@@ -206,11 +200,11 @@ export class Parser extends Transform {
     callback();
   }
 
-  _flush(callback) {
+  _flush(callback: (error?: Error) => void) {
     return this.flush(callback, false);
   }
 
-  _transform(chunk, encoding, callback) {
+  _transform(chunk: Buffer, encoding: string, callback: (error?: Error) => void) {
     // we'll assume that we always get chunks with the same encoding.
     if (!this.config.encoding && encoding != 'buffer') {
       this.config.encoding = encoding;

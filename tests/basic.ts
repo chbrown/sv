@@ -6,7 +6,7 @@ import {Parser, Stringifier} from '../index';
 
 describe('basic', () => {
   it('should parse a literal string into some objects', (done) => {
-    var input = [
+    const input = [
       'index	name	time',
       '1	chris	1:18',
       '2	daniel	1:17',
@@ -15,7 +15,7 @@ describe('basic', () => {
       '5	larry	1:31',
     ].join('\n');
 
-    var parser = new Parser();
+    const parser = new Parser();
     readToEnd(parser, (err, rows) => {
       ok(rows[2], 'There should be a third row');
       equal(rows[2].name, 'lewis', 'The name attribute of the third row should be "lewis"');
@@ -25,7 +25,7 @@ describe('basic', () => {
   });
 
   it('should stringify some objects to the expected string', (done) => {
-    var expected = [
+    const expected = [
       'index,name,time',
       '1,chris,NA',
       '2,daniel,1:17',
@@ -35,7 +35,7 @@ describe('basic', () => {
       '', // trailing newline
     ].join('\n');
 
-    var stringifier = new Stringifier({peek: 2, missing: 'NA'});
+    const stringifier = new Stringifier({peek: 2, missing: 'NA'});
     readToEnd(stringifier, (err, chunks) => {
       equal(chunks.join(''), expected, 'Stringify output should equal expected.');
       done();

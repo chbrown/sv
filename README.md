@@ -1,5 +1,9 @@
 # sv
 
+[![npm version](https://badge.fury.io/js/sv.svg)](https://www.npmjs.com/package/sv)
+[![Travis CI Build Status](https://travis-ci.org/chbrown/sv.svg)](https://travis-ci.org/chbrown/sv)
+[![Coverage Status](https://coveralls.io/repos/chbrown/sv/badge.svg)](https://coveralls.io/github/chbrown/sv)
+
 For all your separated value needs.
 
 * `sv.Stringifier` is a [Readable stream](http://nodejs.org/api/stream.html#stream_class_stream_readable).
@@ -135,4 +139,4 @@ Escapes:
 
 ## License
 
-Copyright 2013-2015 Christopher Brown. [MIT Licensed](http://chbrown.github.io/licenses/MIT/#2013-2015).
+Copyright 2013-2016 Christopher Brown. [MIT Licensed](http://chbrown.github.io/licenses/MIT/#2013-2016).
