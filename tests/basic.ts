@@ -1,8 +1,8 @@
-import assert from 'assert';
-import {describe, it} from 'mocha';
+// import {describe, it} from 'mocha';
+import {ok, equal} from 'assert';
 import {readToEnd} from 'streaming';
 
-import * as sv from '..';
+import {Parser, Stringifier} from '../index';
 
 describe('basic', () => {
   it('should parse a literal string into some objects', (done) => {
@@ -12,13 +12,13 @@ describe('basic', () => {
       '2	daniel	1:17',
       '3	lewis	1:30',
       '4	stephen	1:16',
-      '5	larry	1:31'
+      '5	larry	1:31',
     ].join('\n');
 
-    var parser = new sv.Parser();
+    var parser = new Parser();
     readToEnd(parser, (err, rows) => {
-      assert.ok(rows[2], 'There should be a third row');
-      assert.equal(rows[2].name, 'lewis', 'The name attribute of the third row should be "lewis"');
+      ok(rows[2], 'There should be a third row');
+      equal(rows[2].name, 'lewis', 'The name attribute of the third row should be "lewis"');
       done();
     });
     parser.end(input);
@@ -32,12 +32,12 @@ describe('basic', () => {
       '3,lewis,1:30',
       '4,stephen,1:16',
       '5,larry,1:31',
-      '' // trailing newline
+      '', // trailing newline
     ].join('\n');
 
-    var stringifier = new sv.Stringifier({peek: 2, missing: 'NA'});
+    var stringifier = new Stringifier({peek: 2, missing: 'NA'});
     readToEnd(stringifier, (err, chunks) => {
-      assert.equal(chunks.join(''), expected, 'Stringify output should equal expected.');
+      equal(chunks.join(''), expected, 'Stringify output should equal expected.');
       done();
     });
 
