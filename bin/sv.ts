@@ -106,7 +106,7 @@ export function main() {
   else if (argv.version) {
     console.log(require('../package').version);
   }
-  else if (process.stdin['isTTY'] === false) {
+  else if (!process.stdin['isTTY']) {
     // process.stdin.setEncoding('utf8');
     transform(process.stdin, parser_opts, stringifier_opts, exit);
   }
