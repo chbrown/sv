@@ -97,7 +97,7 @@ export class Stringifier extends Transform {
       // obj is definitely an array now, but the fields aren't quoted.
       for (let j = 0; j < length; j++) {
         // assume minimal quoting (don't quote unless the cell contains the delimiter)
-        let value = object[j].toString();
+        let value = String(object[j]);
         const contains_newline = value.indexOf('\n') > -1 || value.indexOf('\r') > -1;
         const contains_quotechar = value.indexOf(this.config.quotechar) > -1;
         if (value.indexOf(this.config.delimiter) > -1 || contains_newline || contains_quotechar) {
