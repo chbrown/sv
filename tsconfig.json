@@ -5,10 +5,6 @@
     "target": "ES5"
   },
   "files": [
-    "node_modules/declarations/async/async.d.ts",
-    "node_modules/declarations/mocha/mocha-node.d.ts",
-    "node_modules/declarations/node/node.d.ts",
-    "node_modules/declarations/optimist/optimist.d.ts",
     "tests/basic.ts",
     "tests/pairs.ts",
     "tests/quotes.ts",
