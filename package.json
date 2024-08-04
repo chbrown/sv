@@ -31,7 +31,10 @@
     "typescript": "^4.9.5"
   },
   "scripts": {
-    "test": "make test"
+    "prepare": "tsc --build && chmod +x bin/sv.js",
+    "test": "istanbul cover _mocha -- tests/ -R spec",
+    "posttest": "coveralls < coverage/lcov.info || true",
+    "clean": "tsc --build --clean"
   },
   "bin": {
     "sv": "bin/sv.js"

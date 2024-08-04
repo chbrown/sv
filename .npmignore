@@ -1,14 +1,7 @@
-tests/basic.ts
-tests/pairs.ts
-tests/quotes.ts
-tests/throughput.ts
-bin/sv.ts
-common.ts
-index.ts
-parser.ts
-stringifier.ts
+*.ts
+!*.d.ts
 .travis.yml
-Makefile
 tsconfig.json
+docs/
 tests/
 coverage/
