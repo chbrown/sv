@@ -147,7 +147,7 @@ export class Stringifier extends Transform {
     return this.flush(callback, false);
   }
 
-  _transform(chunk: any, encoding: string, callback: (error?: Error) => void) {
+  _transform(chunk: any, encoding: BufferEncoding, callback: (error?: Error) => void) {
     // objectMode: true, so chunk is an object (and encoding is always 'utf8'?)
     if (this.config.columns) {
       // flush the _buffer, if needed

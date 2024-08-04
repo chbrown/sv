@@ -8,7 +8,7 @@
 */
 export interface Configuration {
   /** character encoding */
-  encoding?: string;
+  encoding?: BufferEncoding;
   /** string to represent missing data */
   missing?: string;
   /** string to separate rows */

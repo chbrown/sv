@@ -53,7 +53,7 @@ export class Parser extends Transform {
   quotequoteRegExp: RegExp;
   escapeByte: number;
   escapeQuoteRegExp: RegExp;
-  byteBuffer: Buffer = new Buffer(0);
+  byteBuffer: Buffer = Buffer.alloc(0);
   cellBuffer: string[] = [];
 
   constructor(config: ParserConfiguration = {}) {
@@ -204,7 +204,7 @@ export class Parser extends Transform {
     return this.flush(callback, false);
   }
 
-  _transform(chunk: Buffer, encoding: string, callback: (error?: Error) => void) {
+  _transform(chunk: Buffer, encoding: BufferEncoding | 'buffer', callback: (error?: Error) => void) {
     // we'll assume that we always get chunks with the same encoding.
     if (!this.config.encoding && encoding != 'buffer') {
       this.config.encoding = encoding;
