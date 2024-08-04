@@ -1,6 +1,6 @@
 # sv
 
-[![npm version](https://badge.fury.io/js/sv.svg)](https://www.npmjs.com/package/sv)
+[![npm version](https://badge.fury.io/js/@chbrown%2Fsv.svg)](https://www.npmjs.com/package/@chbrown/sv)
 [![Travis CI Build Status](https://travis-ci.org/chbrown/sv.svg)](https://travis-ci.org/chbrown/sv)
 [![Coverage Status](https://coveralls.io/repos/chbrown/sv/badge.svg)](https://coveralls.io/github/chbrown/sv)
 
@@ -11,7 +11,7 @@ For all your separated value needs.
 
 ## Install
 
-    npm install sv
+    npm install @chbrown/sv
 
 The `optimist` dependency is only required for command line use.
 
@@ -32,7 +32,7 @@ sprints.csv:
 
 And in node:
 
-    var sv = require('sv');
+    var sv = require('@chbrown/sv');
     var parser = new sv.Parser();
     parser.on('data', function(obj) {
       console.log('sprinter ->', obj);
@@ -53,7 +53,7 @@ And in node:
       {               amount: 9.16}
     ];
 
-    var sv = require('sv');
+    var sv = require('@chbrown/sv');
     var stringifier = new sv.Stringifier({peek: 2, missing: 'n/a'});
     stringifier.pipe(process.stdout);
     expenses.forEach(function(expense) {

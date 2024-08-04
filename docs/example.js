@@ -1,4 +1,4 @@
-var sv = require('./'); // require('sv') elsewhere
+var sv = require('../'); // require('@chbrown/sv') elsewhere
 
 function stringify() {
   var expenses = [
